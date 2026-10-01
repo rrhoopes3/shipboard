@@ -1,0 +1,6 @@
+{
+  "diff": "diff --git a/site/index.html b/site/index.html\n--- a/site/index.html\n+++ b/site/index.html\n@@ -12,7 +12,7 @@\n </head>\n <body>\n   <p class=\"eyebrow\">Pier notices</p>\n-  <h1 id=\"mark\">Northline night board</h1>\n+  <h1 id=\"mark\" style=\"color:#1F6F78\">Northline night board</h1>\n   <p id=\"lede\">The tide book for this week is posted at the shed.</p>\n <footer>Posted by the night clerk.</footer>\n </body>\n",
+  "truncated": false,
+  "base": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+  "head": "76f040bb04cb1a49788a1e2f2651fc6100357835"
+}

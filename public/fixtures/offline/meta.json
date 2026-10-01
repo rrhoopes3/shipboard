@@ -1,0 +1,5 @@
+{
+  "about": "The board stops answering after two polls.",
+  "extends": "harbor",
+  "offlineAfter": 2
+}

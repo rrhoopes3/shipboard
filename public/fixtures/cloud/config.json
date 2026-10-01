@@ -1,0 +1,42 @@
+{
+  "mode": "cloudflare",
+  "publicRead": true,
+  "boardAuth": false,
+  "agents": [
+    {
+      "id": "demo",
+      "label": "Demo (scripted)",
+      "kind": "demo"
+    },
+    {
+      "id": "manual",
+      "label": "Manual (you push)",
+      "kind": "manual"
+    },
+    {
+      "id": "claude",
+      "label": "Claude Code",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:14:24.000Z"
+    },
+    {
+      "id": "codex",
+      "label": "Codex",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:13:52.000Z"
+    },
+    {
+      "id": "grok",
+      "label": "Grok",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:13:31.000Z"
+    },
+    {
+      "id": "cursor",
+      "label": "Cursor",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:04:10.000Z"
+    }
+  ],
+  "namespace": "shipboard"
+}

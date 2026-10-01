@@ -1,0 +1,49 @@
+{
+  "projects": [
+    {
+      "id": "harbor-notes-3f2a",
+      "name": "Harbor notes",
+      "description": "Three agents, one notice. Ship what merges. When one conflicts, re-run it on current main.",
+      "createdAt": "2026-10-01T21:12:10.000Z",
+      "mainSha": "e6eaa84a2da16563ecfef57ab13068dc576e6a8c",
+      "counts": {
+        "rerun": 1,
+        "ship": 1,
+        "review": 0,
+        "working": 0,
+        "parked": 0,
+        "shipped": 1
+      }
+    },
+    {
+      "id": "northline-notices-5e2b",
+      "name": "Northline notices",
+      "description": "Pier notices for the Northline night shift.",
+      "createdAt": "2026-10-01T21:01:10.000Z",
+      "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+      "counts": {
+        "rerun": 2,
+        "ship": 2,
+        "review": 1,
+        "working": 3,
+        "parked": 1,
+        "shipped": 2
+      }
+    },
+    {
+      "id": "ferry-board-19be",
+      "name": "Ferry board",
+      "description": "Departures from the north pier. Nothing dispatched yet.",
+      "createdAt": "2026-09-29T16:02:11.000Z",
+      "mainSha": "f70a1267a0010bf0d128cde594034dedc85abec8",
+      "counts": {
+        "rerun": 0,
+        "ship": 0,
+        "review": 0,
+        "working": 0,
+        "parked": 0,
+        "shipped": 0
+      }
+    }
+  ]
+}

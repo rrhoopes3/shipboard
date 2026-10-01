@@ -1,0 +1,5 @@
+{
+  "about": "Read-only: the board wants a token. Any token unlocks it, except a wrong one: use harbor.",
+  "extends": "harbor",
+  "token": "harbor"
+}

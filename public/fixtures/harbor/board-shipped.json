@@ -1,0 +1,580 @@
+{
+  "version": 15,
+  "project": {
+    "id": "harbor-notes-3f2a",
+    "name": "Harbor notes",
+    "description": "Three agents, one notice. Ship what merges. When one conflicts, re-run it on current main.",
+    "createdAt": "2026-10-01T21:12:10.000Z",
+    "mainSha": "a543dcaf69ce1fdee113f325fcf131855abfb811",
+    "counts": {
+      "rerun": 0,
+      "ship": 1,
+      "review": 0,
+      "working": 0,
+      "parked": 0,
+      "shipped": 2
+    },
+    "repo": "harbor-notes-3f2a",
+    "seed": "harbor",
+    "previewUrl": "/preview/harbor-notes-3f2a/main/"
+  },
+  "lanes": [
+    {
+      "lane": "rerun",
+      "tasks": []
+    },
+    {
+      "lane": "ship",
+      "tasks": [
+        {
+          "brief": {
+            "id": "add-the-night-clerk-e5a0",
+            "task": "Add the night clerk footer",
+            "constraints": [
+              "Do not change the pier name",
+              "Touch only site/index.html"
+            ],
+            "acceptance": "contains site/index.html \"Posted by the night clerk.\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:12:10.600Z",
+            "demo": "footer"
+          },
+          "lane": "ship",
+          "current": {
+            "id": "harbor-notes-3f2a--add-the-night-cl-6c42",
+            "briefId": "add-the-night-clerk-e5a0",
+            "number": 1,
+            "agent": "demo",
+            "agentLabel": "Demo (scripted)",
+            "agentKind": "demo",
+            "status": "ready",
+            "repo": "harbor-notes-3f2a--add-the-night-cl-6c42",
+            "baseSha": "84a52fad1c4238fa0382758e86371ed407cd9c53",
+            "briefSha": "95ed4c01e682f5e32f20214fe56f17a2c87fa420",
+            "headSha": "2b58956da7f13d543c35151d30725d1fcdc87de4",
+            "createdAt": "2026-10-01T21:12:10.600Z",
+            "updatedAt": "2026-10-01T21:14:58.000Z",
+            "job": {
+              "attemptId": "harbor-notes-3f2a--add-the-night-cl-6c42",
+              "agent": "demo",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:12:10.600Z",
+              "runnerId": "demo",
+              "claimedAt": "2026-10-01T21:12:10.600Z",
+              "leaseExpiresAt": "2026-10-01T21:14:42.000Z",
+              "finishedAt": "2026-10-01T21:12:12.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Edited site/index.html.",
+                "commitSha": "2b58956da7f13d543c35151d30725d1fcdc87de4",
+                "changedPaths": [
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Demo (scripted)"
+            },
+            "digest": {
+              "summary": "Touched site/index.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/index.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 0
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "Posted by the night clerk.",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "2b58956da7f13d543c35151d30725d1fcdc87de4",
+              "baseSha": "84a52fad1c4238fa0382758e86371ed407cd9c53"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "a543dcaf69ce1fdee113f325fcf131855abfb811",
+              "headSha": "2b58956da7f13d543c35151d30725d1fcdc87de4",
+              "checkedAt": "2026-10-01T21:14:58.000Z"
+            },
+            "review": null,
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": "/preview/harbor-notes-3f2a/harbor-notes-3f2a--add-the-night-cl-6c42/",
+            "primary": "ship",
+            "secondary": [
+              "park",
+              "rerun"
+            ]
+          },
+          "history": []
+        }
+      ]
+    },
+    {
+      "lane": "review",
+      "tasks": []
+    },
+    {
+      "lane": "working",
+      "tasks": []
+    },
+    {
+      "lane": "parked",
+      "tasks": []
+    },
+    {
+      "lane": "shipped",
+      "tasks": [
+        {
+          "brief": {
+            "id": "tint-the-pier-name-i-9c01",
+            "task": "Tint the pier name in channel teal",
+            "constraints": [
+              "Leave the notice text alone",
+              "Touch only site/index.html"
+            ],
+            "acceptance": "contains site/index.html \"color:#1F6F78\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:12:10.200Z",
+            "demo": "mark-color"
+          },
+          "lane": "shipped",
+          "current": {
+            "id": "harbor-notes-3f2a--tint-the-pier-na-77de",
+            "briefId": "tint-the-pier-name-i-9c01",
+            "number": 2,
+            "agent": "demo",
+            "agentLabel": "Demo (scripted)",
+            "agentKind": "demo",
+            "status": "shipped",
+            "repo": "harbor-notes-3f2a--tint-the-pier-na-77de",
+            "baseSha": "e6eaa84a2da16563ecfef57ab13068dc576e6a8c",
+            "briefSha": "391f4f2d27f0b7673e8a369de1971c08e15a3276",
+            "headSha": "3c1d12ecef3cdd645c921495a4cb0bc6251925e0",
+            "createdAt": "2026-10-01T21:14:40.000Z",
+            "updatedAt": "2026-10-01T21:14:58.000Z",
+            "job": {
+              "attemptId": "harbor-notes-3f2a--tint-the-pier-na-77de",
+              "agent": "demo",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:14:40.000Z",
+              "runnerId": "demo",
+              "claimedAt": "2026-10-01T21:14:40.000Z",
+              "leaseExpiresAt": "2026-10-01T21:17:12.000Z",
+              "finishedAt": "2026-10-01T21:14:42.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Edited site/index.html.",
+                "commitSha": "3c1d12ecef3cdd645c921495a4cb0bc6251925e0",
+                "changedPaths": [
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Demo (scripted)"
+            },
+            "digest": {
+              "summary": "Touched site/index.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/index.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 1
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "color:#1F6F78",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "3c1d12ecef3cdd645c921495a4cb0bc6251925e0",
+              "baseSha": "e6eaa84a2da16563ecfef57ab13068dc576e6a8c"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "e6eaa84a2da16563ecfef57ab13068dc576e6a8c",
+              "headSha": "3c1d12ecef3cdd645c921495a4cb0bc6251925e0",
+              "checkedAt": "2026-10-01T21:14:42.000Z"
+            },
+            "review": null,
+            "replacedBy": null,
+            "replaces": "harbor-notes-3f2a--tint-the-pier-na-3b1c",
+            "discardReason": null,
+            "shippedSha": "a543dcaf69ce1fdee113f325fcf131855abfb811",
+            "previewUrl": "/preview/harbor-notes-3f2a/harbor-notes-3f2a--tint-the-pier-na-77de/",
+            "primary": "none",
+            "secondary": []
+          },
+          "history": [
+            {
+              "id": "harbor-notes-3f2a--tint-the-pier-na-3b1c",
+              "briefId": "tint-the-pier-name-i-9c01",
+              "number": 1,
+              "agent": "demo",
+              "agentLabel": "Demo (scripted)",
+              "agentKind": "demo",
+              "status": "discarded",
+              "repo": "harbor-notes-3f2a--tint-the-pier-na-3b1c",
+              "baseSha": "84a52fad1c4238fa0382758e86371ed407cd9c53",
+              "briefSha": "8e95891e581b825d155be28aaaf00c93e7615fd8",
+              "headSha": "851609f1cb5349e7a46de1a96c1b8a975211ffa1",
+              "createdAt": "2026-10-01T21:12:10.200Z",
+              "updatedAt": "2026-10-01T21:14:40.000Z",
+              "job": {
+                "attemptId": "harbor-notes-3f2a--tint-the-pier-na-3b1c",
+                "agent": "demo",
+                "state": "done",
+                "queuedAt": "2026-10-01T21:12:10.200Z",
+                "runnerId": "demo",
+                "claimedAt": "2026-10-01T21:12:10.200Z",
+                "leaseExpiresAt": "2026-10-01T21:14:41.000Z",
+                "finishedAt": "2026-10-01T21:12:11.000Z",
+                "outcome": {
+                  "reason": "pushed",
+                  "summary": "Edited site/index.html.",
+                  "commitSha": "851609f1cb5349e7a46de1a96c1b8a975211ffa1",
+                  "changedPaths": [
+                    "site/index.html"
+                  ]
+                },
+                "agentLabel": "Demo (scripted)"
+              },
+              "digest": {
+                "summary": "Touched site/index.html. Acceptance check passed.",
+                "satisfies": "yes",
+                "reasons": [
+                  "Touched site/index.html.",
+                  "Acceptance check passed."
+                ],
+                "files": [
+                  {
+                    "path": "site/index.html",
+                    "status": "modified",
+                    "additions": 1,
+                    "deletions": 1
+                  }
+                ],
+                "checks": [
+                  {
+                    "path": "site/index.html",
+                    "text": "color:#1F6F78",
+                    "ok": true
+                  }
+                ],
+                "unexpectedPaths": [],
+                "missedPaths": [],
+                "controlPaths": [],
+                "headSha": "851609f1cb5349e7a46de1a96c1b8a975211ffa1",
+                "baseSha": "84a52fad1c4238fa0382758e86371ed407cd9c53"
+              },
+              "merge": {
+                "state": "conflict",
+                "paths": [
+                  "site/index.html"
+                ],
+                "mainSha": "e6eaa84a2da16563ecfef57ab13068dc576e6a8c",
+                "headSha": "851609f1cb5349e7a46de1a96c1b8a975211ffa1",
+                "checkedAt": "2026-10-01T21:14:05.000Z"
+              },
+              "review": null,
+              "replacedBy": "harbor-notes-3f2a--tint-the-pier-na-77de",
+              "replaces": null,
+              "discardReason": "Conflicted with main in site/index.html after \"Rename the pier mark to the night board\" shipped.",
+              "shippedSha": null,
+              "previewUrl": "/preview/harbor-notes-3f2a/harbor-notes-3f2a--tint-the-pier-na-3b1c/",
+              "primary": "none",
+              "secondary": []
+            }
+          ]
+        },
+        {
+          "brief": {
+            "id": "rename-the-pier-mark-41d7",
+            "task": "Rename the pier mark to the night board",
+            "constraints": [
+              "Keep the mark element",
+              "Touch only site/index.html"
+            ],
+            "acceptance": "contains site/index.html \"Northline night board\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:12:10.400Z",
+            "demo": "mark-name"
+          },
+          "lane": "shipped",
+          "current": {
+            "id": "harbor-notes-3f2a--rename-the-pier-a20e",
+            "briefId": "rename-the-pier-mark-41d7",
+            "number": 1,
+            "agent": "demo",
+            "agentLabel": "Demo (scripted)",
+            "agentKind": "demo",
+            "status": "shipped",
+            "repo": "harbor-notes-3f2a--rename-the-pier-a20e",
+            "baseSha": "84a52fad1c4238fa0382758e86371ed407cd9c53",
+            "briefSha": "e9df433a2cb40b47a476247950c8665b15bda0af",
+            "headSha": "ae96e8918fb8b6edd993b3952ffd480f4fa4b8db",
+            "createdAt": "2026-10-01T21:12:10.400Z",
+            "updatedAt": "2026-10-01T21:14:05.000Z",
+            "job": {
+              "attemptId": "harbor-notes-3f2a--rename-the-pier-a20e",
+              "agent": "demo",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:12:10.400Z",
+              "runnerId": "demo",
+              "claimedAt": "2026-10-01T21:12:10.400Z",
+              "leaseExpiresAt": "2026-10-01T21:14:41.000Z",
+              "finishedAt": "2026-10-01T21:12:11.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Edited site/index.html.",
+                "commitSha": "ae96e8918fb8b6edd993b3952ffd480f4fa4b8db",
+                "changedPaths": [
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Demo (scripted)"
+            },
+            "digest": {
+              "summary": "Touched site/index.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/index.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 1
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "Northline night board",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "ae96e8918fb8b6edd993b3952ffd480f4fa4b8db",
+              "baseSha": "84a52fad1c4238fa0382758e86371ed407cd9c53"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "84a52fad1c4238fa0382758e86371ed407cd9c53",
+              "headSha": "ae96e8918fb8b6edd993b3952ffd480f4fa4b8db",
+              "checkedAt": "2026-10-01T21:12:11.000Z"
+            },
+            "review": null,
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": "e6eaa84a2da16563ecfef57ab13068dc576e6a8c",
+            "previewUrl": "/preview/harbor-notes-3f2a/harbor-notes-3f2a--rename-the-pier-a20e/",
+            "primary": "none",
+            "secondary": []
+          },
+          "history": []
+        }
+      ]
+    }
+  ],
+  "activity": [
+    {
+      "at": "2026-10-01T21:12:10.000Z",
+      "kind": "project",
+      "text": "Created Harbor notes from the harbor demo."
+    },
+    {
+      "at": "2026-10-01T21:12:10.200Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Tint the pier name in channel teal\" to Demo (scripted).",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-3b1c",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:12:10.400Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Rename the pier mark to the night board\" to Demo (scripted).",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "harbor-notes-3f2a--rename-the-pier-a20e",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:12:10.600Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Add the night clerk footer\" to Demo (scripted).",
+      "briefId": "add-the-night-clerk-e5a0",
+      "attemptId": "harbor-notes-3f2a--add-the-night-cl-6c42",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:12:11.000Z",
+      "kind": "pushed",
+      "text": "Demo (scripted) pushed 851609f for \"Tint the pier name in channel teal\".",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-3b1c",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:12:11.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Tint the pier name in channel teal\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-3b1c",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:12:11.000Z",
+      "kind": "pushed",
+      "text": "Demo (scripted) pushed ae96e89 for \"Rename the pier mark to the night board\".",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "harbor-notes-3f2a--rename-the-pier-a20e",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:12:11.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Rename the pier mark to the night board\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "harbor-notes-3f2a--rename-the-pier-a20e",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:12:12.000Z",
+      "kind": "pushed",
+      "text": "Demo (scripted) pushed 2b58956 for \"Add the night clerk footer\".",
+      "briefId": "add-the-night-clerk-e5a0",
+      "attemptId": "harbor-notes-3f2a--add-the-night-cl-6c42",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:12:12.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Add the night clerk footer\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "add-the-night-clerk-e5a0",
+      "attemptId": "harbor-notes-3f2a--add-the-night-cl-6c42",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:14:05.000Z",
+      "kind": "shipped",
+      "text": "Shipped \"Rename the pier mark to the night board\" to main at e6eaa84.",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "harbor-notes-3f2a--rename-the-pier-a20e",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:14:05.000Z",
+      "kind": "conflict",
+      "text": "\"Tint the pier name in channel teal\" conflicts with main in site/index.html. Re-run it on current main.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-3b1c",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:14:40.000Z",
+      "kind": "rerun",
+      "text": "Re-ran \"Tint the pier name in channel teal\" as attempt 2 on main e6eaa84. Attempt 1 was discarded: Conflicted with main in site/index.html after \"Rename the pier mark to the night board\" shipped.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-77de",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:14:42.000Z",
+      "kind": "pushed",
+      "text": "Demo (scripted) pushed 3c1d12e for \"Tint the pier name in channel teal\".",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-77de",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:14:42.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Tint the pier name in channel teal\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-77de",
+      "agent": "demo"
+    },
+    {
+      "at": "2026-10-01T21:14:58.000Z",
+      "kind": "shipped",
+      "text": "Shipped \"Tint the pier name in channel teal\" to main at a543dca.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-77de",
+      "agent": "demo"
+    }
+  ],
+  "agents": [
+    {
+      "id": "demo",
+      "label": "Demo (scripted)",
+      "kind": "demo"
+    },
+    {
+      "id": "manual",
+      "label": "Manual (you push)",
+      "kind": "manual"
+    },
+    {
+      "id": "claude",
+      "label": "Claude Code",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:14:24.000Z"
+    },
+    {
+      "id": "codex",
+      "label": "Codex",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:13:52.000Z"
+    },
+    {
+      "id": "grok",
+      "label": "Grok",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:13:31.000Z"
+    },
+    {
+      "id": "cursor",
+      "label": "Cursor",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:04:10.000Z"
+    }
+  ]
+}

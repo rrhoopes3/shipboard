@@ -1,0 +1,50 @@
+{
+  "about": "Two projects: the harbor demo (three scripted briefs, one conflict) and Northline notices (every card state). Built by test/ui/build-fixtures.ts.",
+  "now": "2026-10-01T21:14:30.000Z",
+  "stateNow": {
+    "rerun": "2026-10-01T21:14:41.000Z",
+    "ready": "2026-10-01T21:14:47.000Z",
+    "shipped": "2026-10-01T21:15:02.000Z"
+  },
+  "latencyMs": 160,
+  "demo": {
+    "projectId": "harbor-notes-3f2a",
+    "notice": "Three scripted agents are editing the harbor notice. Ship two of them; the third will conflict. Re-run it."
+  },
+  "previews": {
+    "harbor-notes-3f2a--tint-the-pier-na-3b1c": "/fixtures/harbor/previews/harbor-tint-1.html",
+    "harbor-notes-3f2a--rename-the-pier-a20e": "/fixtures/harbor/previews/harbor-rename.html",
+    "harbor-notes-3f2a--add-the-night-cl-6c42": "/fixtures/harbor/previews/harbor-footer.html",
+    "harbor-notes-3f2a--tint-the-pier-na-77de": "/fixtures/harbor/previews/harbor-tint-2.html",
+    "main@84a52fa": "/fixtures/harbor/previews/harbor-main-0.html",
+    "main@e6eaa84": "/fixtures/harbor/previews/harbor-main-r.html",
+    "main@a543dca": "/fixtures/harbor/previews/harbor-main-t.html",
+    "northline-notices-5e2b--rename-the-pier-a20e": "/fixtures/harbor/previews/north-rename.html",
+    "northline-notices-5e2b--add-the-night-cl-6c42": "/fixtures/harbor/previews/north-footer.html",
+    "northline-notices-5e2b--tint-the-pier-na-3b1c": "/fixtures/harbor/previews/north-tint-1.html",
+    "northline-notices-5e2b--tint-the-pier-na-77de": "/fixtures/harbor/previews/north-tint-2.html",
+    "northline-notices-5e2b--add-the-tide-tab-9a51": "/fixtures/harbor/previews/north-tides.html",
+    "northline-notices-5e2b--tighten-the-foot-c3d9": "/fixtures/harbor/previews/north-copy.html",
+    "northline-notices-5e2b--add-a-storm-warn-1d0b": "/fixtures/harbor/previews/north-storm.html",
+    "northline-notices-5e2b--mark-the-slipway-48fa": "/fixtures/harbor/previews/north-slipway.html",
+    "main@96849b0": "/fixtures/harbor/previews/north-main-f.html"
+  },
+  "transitions": {
+    "rerun:harbor-notes-3f2a--tint-the-pier-na-3b1c": {
+      "board": "board-rerun.json",
+      "now": "2026-10-01T21:14:40.000Z",
+      "attemptId": "harbor-notes-3f2a--tint-the-pier-na-77de",
+      "notice": "Discarded the old diff. Attempt 2 runs the same brief on main e6eaa84.",
+      "then": {
+        "afterMs": 3800,
+        "board": "board-ready.json",
+        "now": "2026-10-01T21:14:44.000Z"
+      }
+    },
+    "ship:harbor-notes-3f2a--tint-the-pier-na-77de": {
+      "board": "board-shipped.json",
+      "now": "2026-10-01T21:14:59.000Z",
+      "notice": "Shipped to main. Every other ready attempt was re-checked against the new main."
+    }
+  }
+}
