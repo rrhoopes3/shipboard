@@ -8,28 +8,35 @@ Workers, Queues event subscriptions, Sandbox SDK and a Durable Object per projec
 
 ## The idea
 
-Multi-agent coding today is pull requests with agents bolted on. Three agents open three PRs,
-two of them conflict, and a human spends the evening in a merge editor reconciling work that
-no human wrote.
+**When an agent's fork stops merging, shipboard's default action discards the diff and
+re-executes the brief that was committed as the fork's first commit, against the new main.
+The human gets a Ship button, not a merge editor.**
 
-shipboard replaces the PR with three things:
+That is the whole bet. Tools that repair a conflicted branch keep the old tip and patch it
+forward: rebase it, resolve it, or have an agent fix the conflict in place. shipboard throws
+the old tip away. The brief is the durable thing; the diff is disposable output that can be
+regenerated. Agents are cheap. Three-way merges of agent output are not.
 
-1. **Intent-first forks.** An agent task starts as an Artifacts fork of the project. The first
-   commit on the fork is a structured **brief**: task, constraints, acceptance check, the paths
-   it expects to touch. The agent gets a repo-scoped write token for *that fork only*. The
-   coordinator never sees the agent's credentials and the agent never sees anyone else's.
+### What is not new
+
+A board of parallel agent tasks, one isolated copy of the repo per agent, and trial-merging a
+change before it lands all exist elsewhere. shipboard uses them as plumbing and does not claim
+them.
+
+### How it works
+
+1. **The brief is the fork's first commit.** An agent task starts as an Artifacts fork of the
+   project. Its first commit is a structured brief: task, constraints, acceptance check, the
+   paths it expects to touch. The agent gets a repo-scoped write token for *that fork only*.
 2. **Push → digest.** A Queue consumer wakes on every `repo.pushed` event, reads the brief and
    the diff, asks "does this diff satisfy the brief", trial-merges the fork against the current
    main in a Sandbox (real `git`), and records clean/conflict plus the preview URL from Workers
    Builds. All of that lands in the project's Durable Object.
-3. **The ship board.** One page per project. Every open fork with its brief, its digest, its
-   preview, its build state, its merge state, and **one button**. Agent context stays attached
-   to the change so a human can still decide what ships.
-
-And the part that matters: **a conflict is not something you resolve. It is something you
-re-run.** When a fork no longer merges cleanly, the board offers to re-run the agent against
-the new main with its original brief. Agents are cheap. Three-way merges of agent output are
-not.
+3. **Conflict → re-run.** A fork that no longer merges cleanly is not handed to a human to
+   resolve. Its diff is dropped, a fresh fork is cut from the new main, and the agent runs the
+   same brief again. The re-run goes through step 2 like any other push.
+4. **Ship.** One page per project lists each open fork with its brief, digest, preview and merge
+   state, and one button. The human decides what ships; nobody merges by hand.
 
 This is a productized version of a protocol one person has been running by hand for a year
 across Claude Code, Codex, Grok and Cursor on one VPS: a `queue/` of task briefs, a
