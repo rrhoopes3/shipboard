@@ -110,7 +110,7 @@ export function bytesEqual(a: Uint8Array | null, b: Uint8Array | null): boolean 
 export function parseBrief(bytes: Uint8Array): Brief | null {
   let value: unknown
   try {
-    value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))
+    value = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes))
   } catch {
     return null
   }

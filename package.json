@@ -15,10 +15,11 @@
     "agent": "tsx runner/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/cloudflare/tsconfig.json",
-    "cf:types": "wrangler types src/cloudflare/worker-configuration.d.ts",
-    "cf:dev": "wrangler dev",
-    "cf:check": "wrangler deploy --dry-run --outdir .wrangler/dry",
-    "deploy": "wrangler deploy"
+    "cf:types": "wrangler types --include-runtime=false .wrangler/types/worker-configuration.d.ts",
+    "cf:dev": "wrangler dev --env dev",
+    "cf:check": "wrangler deploy --dry-run --outdir .wrangler/dry --env=''",
+    "deploy": "wrangler deploy --env=''",
+    "deploy:dev": "wrangler deploy --env dev"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.6",

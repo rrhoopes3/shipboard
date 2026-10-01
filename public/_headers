@@ -1,0 +1,8 @@
+# Cloudflare static assets: headers for the board UI (docs/ARCHITECTURE.md, "Security headers").
+# The Worker sets its own headers on /api/* and /preview/*; these rules never reach those responses.
+# Keep the policy identical to BOARD_CSP in src/http/api.ts (test/cloudflare/config.test.ts checks it).
+/*
+  Content-Security-Policy: default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY

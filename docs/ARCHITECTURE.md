@@ -230,10 +230,21 @@ All responses: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
   `triggers.events: [{ type: "cf.artifacts.repo.pushed", filter: { namespace: "shipboard" }, targets: [{ type: "workflow", workflow_name: "shipboard-push" }] }]`,
   optional `ai: { binding: "AI" }`, `vars: { PUBLIC_READ: "true", REVIEW_MODEL: "..." }`,
   `limits: { cpu_ms: 300000 }`. Secrets: `BOARD_TOKEN`, `RUNNER_TOKEN`.
+  Also: `assets.not_found_handling: "single-page-application"` (so `/p/<id>` gets the app shell, as
+  locally), `vars.ARTIFACTS_NAMESPACE` (the namespace the binding points at; shown in `/api/config`,
+  checked on push events), `ai.remote: true` (Workers AI has no local mode), and an `env.dev` block
+  on namespace `shipboard-dev` that repeats every non-inheritable binding. Board pages get their
+  headers from `public/_headers`. Deploy steps: [`docs/DEPLOY.md`](DEPLOY.md).
 - `ProjectDO` (one per project id) holds the core `ProjectService`, storing the `ProjectState` as one
   value in DO storage; an alarm calls `tick()` while jobs are running. A mutex in core serialises
   operations (DO input gates do not cover awaited fetches).
-- `RegistryDO` (singleton) keeps the project index.
+  Its RPC methods have the `ProjectHandle` names and arguments but answer an envelope,
+  `{ ok: true, value } | { ok: false, error: { message, status, code } }`, because an error crossing
+  Workers RPC keeps only its message. `Host.project(id)` returns a `ProjectClient`
+  (`src/cloudflare/rpc.ts`) that unwraps it back into a value or a `PortError`. The alarm fires every
+  30 s while a job is queued or running, every 60 s while an attempt touched in the last 24 h is
+  `waiting`, and stops otherwise.
+- `RegistryDO` (singleton) keeps the project index and when runners offering each agent last polled.
 - `PushWorkflow.run(event)` parses the event defensively (`event.payload` may be the CloudEvent or
   its `payload`), maps repo → project via `projectIdOf`, and calls `onPushEvent` in a `step.do`.
 - `AiReviewer`: Workers AI chat model named by `REVIEW_MODEL`; returns null on any failure.
