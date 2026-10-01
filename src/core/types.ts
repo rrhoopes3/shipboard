@@ -131,6 +131,8 @@ export type Job = {
   leaseExpiresAt?: string
   finishedAt?: string
   outcome?: JobOutcome
+  /** How many times an expired lease put this job back in the queue (capped, see core/state.ts). */
+  requeues?: number
 }
 
 export type Attempt = {

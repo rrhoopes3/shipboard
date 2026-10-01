@@ -117,6 +117,8 @@ export interface ProjectHandle {
   diff(attemptId: string): Promise<{ diff: string; truncated: boolean; base: string; head: string }>
   preview(ref: string, path: string): Promise<{ body: Uint8Array; contentType: string } | null>
   claim(runnerId: string, agents: string[]): Promise<ClaimedJob | null>
+  /** `queuedAt` of the oldest job `claim` would hand out for these agents, or null. Lets the claim fan-out pick the oldest job across projects. */
+  nextJobAt(agents: string[]): Promise<string | null>
   heartbeat(attemptId: string, runnerId: string): Promise<{ leaseExpiresAt: string }>
   jobCredentials(attemptId: string, runnerId: string, scope: "read" | "write"): Promise<GitCredentials>
   finish(attemptId: string, runnerId: string, outcome: JobOutcome): Promise<BoardView>
