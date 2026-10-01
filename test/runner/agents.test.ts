@@ -79,6 +79,10 @@ describe("default templates", () => {
     const t = (kind: AgentTemplate["kind"], args: string[]) => bypassFlagsIn({ kind, args })
     expect(t("grok", ["--always-approve"])).toEqual(["--always-approve"])
     expect(t("grok", ["--yolo"])).toEqual(["--yolo"])
+    // Inside Grok's own workspace or strict sandbox, always-approve is not a bypass.
+    expect(t("grok", ["--always-approve", "--sandbox", "workspace"])).toEqual([])
+    expect(t("grok", ["--yolo", "--sandbox=strict"])).toEqual([])
+    expect(t("grok", ["--always-approve", "--sandbox", "off"])).toEqual(["--always-approve"])
     expect(t("grok", ["--permission-mode", "bypassPermissions"])).toEqual(["--permission-mode bypassPermissions"])
     expect(t("claude", ["--permission-mode=bypassPermissions"])).toEqual(["--permission-mode bypassPermissions"])
     expect(t("claude", ["--dangerously-skip-permissions"])).toEqual(["--dangerously-skip-permissions"])
@@ -88,10 +92,11 @@ describe("default templates", () => {
     expect(t("script", ["--yolo"])).toEqual([])
   })
 
-  it("Grok: acceptEdits, workspace sandbox, no --trust, and deny rules for git and .git/.shipboard", () => {
+  it("Grok: always-approve inside the workspace sandbox, no --trust, and deny rules for git and .git/.shipboard", () => {
     const args = DEFAULT_TEMPLATES.grok.args
     expect(DEFAULT_TEMPLATES.grok.bin).toBe("/Users/grokbot5000/.grok/bin/grok")
-    expect(args.join(" ")).toContain("--permission-mode acceptEdits")
+    expect(args).toContain("--always-approve")
+    expect(args).not.toContain("acceptEdits")
     expect(args.join(" ")).toContain("--sandbox workspace")
     expect(args).not.toContain("--trust")
     expect(args).toContain("--prompt-file")

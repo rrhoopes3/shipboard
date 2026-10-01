@@ -3,9 +3,11 @@
  * replaced per element in a single pass, so a brief containing "{cwd}" stays literal.
  *
  * Defaults are the safe headless invocations from research/agents.md section 6, as corrected:
- * - No bypass flags on the host. Claude uses acceptEdits, Codex the workspace-write sandbox, Grok
- *   acceptEdits plus its workspace sandbox. Grok's `--always-approve` is its `--yolo`, so it is not
- *   used; Grok is not given `--trust` either, so a fresh clone's project config stays untrusted.
+ * - No bypass flags on the host. Claude uses acceptEdits, Codex the workspace-write sandbox. Grok
+ *   1.0.44 cancels a headless run at the first edit under acceptEdits (seen live on 2026-10-01), so
+ *   it runs with `--always-approve` inside its workspace sandbox; deny rules still win over
+ *   always-approve per Grok's docs. Without a workspace/strict sandbox, always-approve counts as a
+ *   bypass. Grok is not given `--trust`, so a fresh clone's project config stays untrusted.
  * - Cursor has no narrower headless edit mode than `--force` (documented alias: `--yolo`). Its
  *   default template therefore carries a bypass flag and is refused unless `allowBypass` is set.
  * - git commit/push and edits to .git/.shipboard are denied where the CLI has deny rules. The runner
@@ -134,8 +136,7 @@ export const DEFAULT_TEMPLATES: Record<Exclude<TemplateKind, "script">, AgentTem
       "{cwd}",
       "--output-format",
       "json",
-      "--permission-mode",
-      "acceptEdits",
+      "--always-approve",
       "--sandbox",
       "workspace",
       "--disable-web-search",
@@ -175,7 +176,7 @@ export const DEFAULT_TEMPLATES: Record<Exclude<TemplateKind, "script">, AgentTem
     versionArgs: ["--version"],
     notes: [
       "Grok OAuth logins expire after 7 days; an unattended runner needs `grok login` again or XAI_API_KEY (a stored login outranks the key).",
-      "acceptEdits lets Grok edit files without asking; shell commands outside the --allow rules are not approved in a headless run.",
+      "--always-approve lets Grok edit inside its workspace sandbox without asking; the --deny rules still apply.",
       "--sandbox workspace is a Seatbelt profile; Grok logs a warning and continues unsandboxed if it cannot apply it.",
     ],
   },
@@ -234,12 +235,21 @@ const BYPASS_FLAGS: Record<TemplateKind, { flags: string[]; values: Record<strin
   script: { flags: [], values: {} },
 }
 
+/** Grok's always-approve is acceptable only while its own sandbox confines writes to the clone. */
+function grokSandboxed(args: readonly string[]): boolean {
+  return args.some((arg, i) => {
+    const value = arg === "--sandbox" ? args[i + 1] : arg.startsWith("--sandbox=") ? arg.slice("--sandbox=".length) : undefined
+    return value === "workspace" || value === "strict"
+  })
+}
+
 export function bypassFlagsIn(template: Pick<AgentTemplate, "kind" | "args">): string[] {
   const rules = BYPASS_FLAGS[template.kind]
+  const sandboxed = template.kind === "grok" && grokSandboxed(template.args)
   const found: string[] = []
   template.args.forEach((arg, i) => {
     const [name, inline] = arg.startsWith("--") && arg.includes("=") ? [arg.slice(0, arg.indexOf("=")), arg.slice(arg.indexOf("=") + 1)] : [arg, undefined]
-    if (rules.flags.includes(name)) found.push(name)
+    if (rules.flags.includes(name) && !(sandboxed && (name === "--always-approve" || name === "--yolo"))) found.push(name)
     const bad = rules.values[name]
     const value = inline ?? template.args[i + 1]
     if (bad && value !== undefined && bad.includes(value)) found.push(`${name} ${value}`)
