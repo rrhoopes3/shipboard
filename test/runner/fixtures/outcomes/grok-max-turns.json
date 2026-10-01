@@ -1,0 +1,1 @@
+{"text":"I ran out of turns while checking the stylesheet.","stopReason":"max_turn_requests","sessionId":"0199f2a5-0000-7000-8000-000000000003","requestId":"c4a2d3e5-0000-4000-8000-000000000004","num_turns":40,"usage":{"input_tokens":91000,"output_tokens":12000,"total_tokens":103000},"modelUsage":{},"total_cost_usd":0.0912,"total_cost_usd_ticks":912000000}

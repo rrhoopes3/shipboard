@@ -1,0 +1,77 @@
+{
+  "$comment": "Copy to shipboard.runner.json (or pass --config <file>). Every key is optional; these are the defaults unless noted. Precedence: defaults < this file < env (SHIPBOARD_URL, SHIPBOARD_RUNNER_TOKEN) < flags (--url --agents --concurrency --job-timeout --once --dry-run). The runner token is read from SHIPBOARD_RUNNER_TOKEN only, never from this file. Run `npm run runner -- --dry-run` to see what resolves.",
+
+  "url": "http://127.0.0.1:8787",
+  "runnerId": "my-mac",
+  "agents": ["grok"],
+  "concurrency": 1,
+
+  "jobTimeoutSec": 1200,
+  "killGraceSec": 15,
+  "pollSec": 3,
+  "idlePollMaxSec": 15,
+  "heartbeatSec": 60,
+  "gitTimeoutSec": 300,
+  "maxTurns": 40,
+  "budgetUsd": 2,
+
+  "workDir": "/tmp/shipboard-jobs",
+  "keepJobDirs": false,
+
+  "unsafeRepoConfig": "clean",
+  "pushPartial": false,
+
+  "templates": {
+    "$comment": "Keyed by agent id (the ids the board dispatches to). An entry replaces only the fields it names; the rest comes from the built-in template for its kind (claude, codex, grok, cursor) or, for kind script, from {args: [\"{prompt_file}\", \"{cwd}\"], parser: \"plain\"}. Placeholders, replaced inside each argv element: {prompt} {prompt_file} {cwd} {job_dir} {session_uuid} {max_turns} {budget_usd}. args are an argv array run without a shell. envPass names host env vars handed to that agent when set; nothing else from the host env reaches it except PATH, HOME and LANG. Templates that use a CLI's bypass/yolo flag are refused unless allowBypass is true.",
+
+    "grok": {
+      "$comment": "These are the built-in grok args, spelled out. acceptEdits plus Grok's Seatbelt workspace sandbox; never --always-approve (that is Grok's --yolo) and never --trust, so the clone's own .claude/.grok config stays untrusted.",
+      "bin": "/Users/grokbot5000/.grok/bin/grok",
+      "args": [
+        "--prompt-file", "{prompt_file}", "--cwd", "{cwd}", "--output-format", "json",
+        "--permission-mode", "acceptEdits", "--sandbox", "workspace",
+        "--disable-web-search", "--no-subagents",
+        "--max-turns", "{max_turns}", "-s", "{session_uuid}",
+        "--allow", "Bash(npm test*)", "--allow", "Bash(npm run *)", "--allow", "Bash(node *)",
+        "--deny", "Bash(git commit*)", "--deny", "Bash(git push*)", "--deny", "Bash(git config*)", "--deny", "Bash(sudo*)",
+        "--deny", "Edit(**/.git/**)", "--deny", "Write(**/.git/**)",
+        "--deny", "Edit(**/.shipboard/**)", "--deny", "Write(**/.shipboard/**)"
+      ],
+      "stdin": null,
+      "envPass": ["XAI_API_KEY", "GROK_HOME"],
+      "envSet": { "RUST_LOG": "error" },
+      "parser": "grok-json",
+      "timeoutSec": 1200,
+      "versionArgs": ["--version"]
+    },
+
+    "claude": {
+      "$comment": "Built-in args: -p {prompt} --output-format json --permission-mode acceptEdits --permission-prompts none, a short allow list, git commit/push denied, --setting-sources user --strict-mcp-config --settings {\"disableAllHooks\":true}, --session-id/--max-turns/--max-budget-usd. Auth via CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY.",
+      "bin": "claude",
+      "maxTurns": 40,
+      "budgetUsd": 2
+    },
+
+    "codex": {
+      "$comment": "Built-in args: exec --sandbox workspace-write --json -o {job_dir}/last-message.txt -C {cwd} --ignore-rules -, with the prompt on stdin. The sandbox keeps .git read-only and network off.",
+      "bin": "codex",
+      "envPass": ["CODEX_API_KEY", "CODEX_HOME"]
+    },
+
+    "cursor": {
+      "$comment": "Use Cursor's absolute path: a bare `agent` may be Grok's agent binary. Cursor applies edits only with --force (its docs: same as --yolo), so this agent is refused until allowBypass is true. Only set that on a VM or container, keep --sandbox enabled, and add permissions.deny rules to ~/.cursor/cli-config.json.",
+      "bin": "~/.local/bin/agent",
+      "allowBypass": false
+    },
+
+    "script": {
+      "$comment": "Any program, run as <bin> {prompt_file} {cwd} and judged by its exit code. runner/note-agent.mjs is a model-free demo; a relative bin is resolved from this file's directory.",
+      "kind": "script",
+      "label": "Note agent (no model)",
+      "bin": "./runner/note-agent.mjs",
+      "args": ["{prompt_file}", "{cwd}"],
+      "parser": "plain",
+      "timeoutSec": 60
+    }
+  }
+}
