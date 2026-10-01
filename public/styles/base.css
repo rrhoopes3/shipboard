@@ -1,0 +1,202 @@
+/* Reset, type, focus, icons, flags and the motion vocabulary. */
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background-color: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-ui);
+  font-size: var(--t-body);
+  line-height: 1.45;
+  color: var(--text);
+  background:
+    radial-gradient(900px 420px at 4% -6%, var(--glow), transparent 62%),
+    radial-gradient(1100px 520px at 96% -12%, var(--glow-2), transparent 60%),
+    var(--bg);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, p, ol, ul, figure, pre, dl, dd { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+code, kbd, samp, .mono { font-family: var(--font-mono); }
+code { font-size: 0.92em; }
+::selection { background: var(--lamp-fill); color: var(--lamp-ink); }
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.ic {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 100;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--lamp-fill);
+  color: var(--lamp-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip:focus { top: 12px; }
+
+.sha {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  letter-spacing: 0.01em;
+  padding: 0 0.3em;
+  border-radius: 4px;
+  background: var(--slate-wash);
+  color: var(--text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.num, time, .tabular { font-variant-numeric: tabular-nums; }
+.nowrap { white-space: nowrap; }
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: var(--t-label);
+  font-weight: 500;
+  border: 1px solid var(--line-2);
+  background: var(--slate-wash);
+  color: inherit;
+}
+
+noscript p {
+  margin: 48px var(--gutter);
+  font-size: 1rem;
+  color: var(--text-2);
+}
+
+/* ------------------------------------------------------------------ signal flags (agent marks)
+   International Code of Signals, drawn inline. Never alone: the agent's name always follows. */
+
+.flag {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  flex: none;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--flag-edge);
+  line-height: 0;
+}
+.flag svg { width: 18px; height: 12px; display: block; }
+.f-red { fill: var(--flag-red); }
+.f-blue { fill: var(--flag-blue); }
+.f-yellow { fill: var(--flag-yellow); }
+.f-white { fill: var(--flag-white); }
+.f-slate { fill: var(--slate); }
+.f-saltire { stroke: var(--flag-white); stroke-width: 2.6; fill: none; }
+.f-letter { fill: var(--card); font: 700 6.5px/1 var(--font-ui); }
+
+/* ------------------------------------------------------------------ spinner */
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ------------------------------------------------------------------ motion */
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 var(--channel-glow); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes sonar { from { transform: scale(1); opacity: 0.7; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes node-pulse {
+  0% { box-shadow: 0 0 0 3px var(--card), 0 0 0 3px var(--moon-line); }
+  70% { box-shadow: 0 0 0 3px var(--card), 0 0 0 9px transparent; }
+  100% { box-shadow: 0 0 0 3px var(--card), 0 0 0 3px transparent; }
+}
+@keyframes job-sweep { 0% { background-position: -40% 0; } 100% { background-position: 140% 0; } }
+@keyframes breathe { 50% { opacity: 0.45; } }
+@keyframes card-in { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes tone-glow {
+  0% { box-shadow: var(--shadow-card), 0 0 0 3px var(--tw, var(--lamp-wash)); border-color: var(--tl, var(--lamp-line)); }
+  100% { box-shadow: var(--shadow-card), 0 0 0 3px transparent; }
+}
+@keyframes node-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes wake-draw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes strike-draw { from { background-size: 0 1px; } to { background-size: 100% 1px; } }
+@keyframes ghost-out { to { opacity: 0; transform: translateY(4px); } }
+@keyframes feed-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes feed-glow { 0% { background: var(--lamp-wash); } 100% { background: transparent; } }
+@keyframes count-bump { 0% { transform: scale(1); } 40% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes sha-flash {
+  0% { color: var(--channel); background-size: 100% 4px; }
+  100% { color: var(--text); background-size: 100% 2px; }
+}
+@keyframes expand-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(6px); } }
+@keyframes skeleton { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+/* Reduced motion: nothing loops, nothing travels. State changes land at once; a lane move is marked
+   with a static outline instead (see .card.is-moved in card.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .spinner { border-right-color: currentColor; border-style: dotted; }
+}

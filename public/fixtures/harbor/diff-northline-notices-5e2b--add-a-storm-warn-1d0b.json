@@ -1,0 +1,6 @@
+{
+  "diff": "diff --git a/site/index.html b/site/index.html\n--- a/site/index.html\n+++ b/site/index.html\n@@ -12,6 +12,7 @@\n </head>\n <body>\n   <p class=\"eyebrow\">Pier notices</p>\n+  <p id=\"warning\">Small craft warning until Thursday morning. Moor with extra lines.</p>\n   <h1 id=\"mark\">Northline</h1>\n   <p id=\"lede\">The tide book for this week is posted at the shed.</p>\n </body>\n",
+  "truncated": false,
+  "base": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+  "head": "3165eb09315e586ed555b61f66b5ef882254b87b"
+}

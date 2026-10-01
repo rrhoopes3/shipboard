@@ -1,0 +1,6 @@
+{
+  "about": "PUBLIC_READ=false: reads need the token too (harbor).",
+  "extends": "harbor",
+  "token": "harbor",
+  "requireToken": true
+}

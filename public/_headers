@@ -1,0 +1,12 @@
+# Workers static assets: the board CSP from docs/ARCHITECTURE.md for the app shell. The worker only
+# runs first for /api/* and /preview/*, so these routes never pass through it. /p/<id> is the SPA
+# route (needs assets.not_found_handling = "single-page-application").
+/
+  Content-Security-Policy: default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+/index.html
+  Content-Security-Policy: default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+/p/*
+  Content-Security-Policy: default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer

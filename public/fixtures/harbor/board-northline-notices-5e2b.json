@@ -1,0 +1,1461 @@
+{
+  "version": 83,
+  "project": {
+    "id": "northline-notices-5e2b",
+    "name": "Northline notices",
+    "description": "Pier notices for the Northline night shift.",
+    "createdAt": "2026-10-01T21:01:10.000Z",
+    "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+    "counts": {
+      "rerun": 2,
+      "ship": 2,
+      "review": 1,
+      "working": 3,
+      "parked": 1,
+      "shipped": 2
+    },
+    "repo": "northline-notices-5e2b",
+    "seed": "starter",
+    "previewUrl": "/preview/northline-notices-5e2b/main/"
+  },
+  "lanes": [
+    {
+      "lane": "rerun",
+      "tasks": [
+        {
+          "brief": {
+            "id": "mark-the-slipway-clo-5d02",
+            "task": "Mark the slipway closed on Sundays",
+            "constraints": [
+              "One sentence, after the lede",
+              "Touch only site/index.html"
+            ],
+            "acceptance": "contains site/index.html \"closed on Sundays\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:04:30.000Z"
+          },
+          "lane": "rerun",
+          "current": {
+            "id": "northline-notices-5e2b--mark-the-slipway-48fa",
+            "briefId": "mark-the-slipway-clo-5d02",
+            "number": 1,
+            "agent": "claude",
+            "agentLabel": "Claude Code",
+            "agentKind": "cli",
+            "status": "ready",
+            "repo": "northline-notices-5e2b--mark-the-slipway-48fa",
+            "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+            "briefSha": "4000236d1c89ea21d42dc50eba3c308effb85502",
+            "headSha": "4197aff8d5d90dceb196945dc1876fa7f643483b",
+            "createdAt": "2026-10-01T21:04:30.000Z",
+            "updatedAt": "2026-10-01T21:09:11.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--mark-the-slipway-48fa",
+              "agent": "claude",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:04:30.000Z",
+              "runnerId": "harbor-vps-1",
+              "claimedAt": "2026-10-01T21:04:31.000Z",
+              "leaseExpiresAt": "2026-10-01T21:10:10.000Z",
+              "finishedAt": "2026-10-01T21:07:40.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Added the slipway sentence after the lede.",
+                "commitSha": "4197aff8d5d90dceb196945dc1876fa7f643483b",
+                "changedPaths": [
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Claude Code"
+            },
+            "digest": {
+              "summary": "Touched site/index.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/index.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 0
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "closed on Sundays",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "4197aff8d5d90dceb196945dc1876fa7f643483b",
+              "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527"
+            },
+            "merge": {
+              "state": "conflict",
+              "paths": [
+                "site/index.html"
+              ],
+              "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+              "headSha": "4197aff8d5d90dceb196945dc1876fa7f643483b",
+              "checkedAt": "2026-10-01T21:09:11.000Z"
+            },
+            "review": {
+              "verdict": "satisfies",
+              "note": "One sentence about the slipway, placed after the lede.",
+              "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+              "headSha": "4197aff8d5d90dceb196945dc1876fa7f643483b",
+              "at": "2026-10-01T21:07:44.000Z"
+            },
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--mark-the-slipway-48fa/",
+            "primary": "rerun",
+            "secondary": [
+              "park"
+            ]
+          },
+          "history": []
+        },
+        {
+          "brief": {
+            "id": "post-the-ferry-times-c3a8",
+            "task": "Post the ferry times under the tide table",
+            "constraints": [
+              "Static HTML only. No scripts.",
+              "Keep the tide table as it is"
+            ],
+            "acceptance": "contains site/tides.html \"Ferry\"\nThe last ferry is easy to find.",
+            "paths": [
+              "site/tides.html"
+            ],
+            "createdAt": "2026-10-01T21:03:50.000Z"
+          },
+          "lane": "rerun",
+          "current": {
+            "id": "northline-notices-5e2b--post-the-ferry-t-e270",
+            "briefId": "post-the-ferry-times-c3a8",
+            "number": 1,
+            "agent": "cursor",
+            "agentLabel": "Cursor",
+            "agentKind": "cli",
+            "status": "failed",
+            "repo": "northline-notices-5e2b--post-the-ferry-t-e270",
+            "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+            "briefSha": "ad9910cc6827eece931ff7557a8b76cd97529ef0",
+            "headSha": "ad9910cc6827eece931ff7557a8b76cd97529ef0",
+            "createdAt": "2026-10-01T21:03:50.000Z",
+            "updatedAt": "2026-10-01T21:05:20.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--post-the-ferry-t-e270",
+              "agent": "cursor",
+              "state": "failed",
+              "queuedAt": "2026-10-01T21:03:50.000Z",
+              "runnerId": "mac-mini",
+              "claimedAt": "2026-10-01T21:04:10.000Z",
+              "leaseExpiresAt": "2026-10-01T21:07:10.000Z",
+              "finishedAt": "2026-10-01T21:05:20.000Z",
+              "outcome": {
+                "reason": "agent_error",
+                "summary": "cursor-agent stopped at a login prompt it could not answer.",
+                "durationMs": 70000
+              },
+              "agentLabel": "Cursor"
+            },
+            "digest": null,
+            "merge": null,
+            "review": null,
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": null,
+            "primary": "rerun",
+            "secondary": [
+              "park"
+            ]
+          },
+          "history": []
+        }
+      ]
+    },
+    {
+      "lane": "ship",
+      "tasks": [
+        {
+          "brief": {
+            "id": "tint-the-pier-name-i-9c01",
+            "task": "Tint the pier name in channel teal",
+            "constraints": [
+              "Leave the notice text alone",
+              "Touch only site/index.html"
+            ],
+            "acceptance": "contains site/index.html \"color:#1F6F78\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:02:40.000Z"
+          },
+          "lane": "ship",
+          "current": {
+            "id": "northline-notices-5e2b--tint-the-pier-na-77de",
+            "briefId": "tint-the-pier-name-i-9c01",
+            "number": 2,
+            "agent": "claude",
+            "agentLabel": "Claude Code",
+            "agentKind": "cli",
+            "status": "ready",
+            "repo": "northline-notices-5e2b--tint-the-pier-na-77de",
+            "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+            "briefSha": "5c0aaa1f3697feb91672ed30a0972c3f0718ca08",
+            "headSha": "76f040bb04cb1a49788a1e2f2651fc6100357835",
+            "createdAt": "2026-10-01T21:13:40.000Z",
+            "updatedAt": "2026-10-01T21:14:03.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--tint-the-pier-na-77de",
+              "agent": "claude",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:13:40.000Z",
+              "runnerId": "harbor-vps-1",
+              "claimedAt": "2026-10-01T21:13:42.000Z",
+              "leaseExpiresAt": "2026-10-01T21:16:32.000Z",
+              "finishedAt": "2026-10-01T21:14:02.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Set the mark colour to #1F6F78 on the renamed mark.",
+                "commitSha": "76f040bb04cb1a49788a1e2f2651fc6100357835",
+                "changedPaths": [
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Claude Code"
+            },
+            "digest": {
+              "summary": "Touched site/index.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/index.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 1
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "color:#1F6F78",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "76f040bb04cb1a49788a1e2f2651fc6100357835",
+              "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+              "headSha": "76f040bb04cb1a49788a1e2f2651fc6100357835",
+              "checkedAt": "2026-10-01T21:14:03.000Z"
+            },
+            "review": {
+              "verdict": "satisfies",
+              "note": "Colours the renamed mark teal. The footer is untouched.",
+              "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+              "headSha": "76f040bb04cb1a49788a1e2f2651fc6100357835",
+              "at": "2026-10-01T21:14:05.000Z"
+            },
+            "replacedBy": null,
+            "replaces": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--tint-the-pier-na-77de/",
+            "primary": "ship",
+            "secondary": [
+              "park",
+              "rerun"
+            ]
+          },
+          "history": [
+            {
+              "id": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+              "briefId": "tint-the-pier-name-i-9c01",
+              "number": 1,
+              "agent": "claude",
+              "agentLabel": "Claude Code",
+              "agentKind": "cli",
+              "status": "discarded",
+              "repo": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+              "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+              "briefSha": "de93795c380c28180007f3c671cb68b42d787c4c",
+              "headSha": "d65cf9c09b7e45f86b32e0c1e4c0cecb9ce6bf95",
+              "createdAt": "2026-10-01T21:02:40.000Z",
+              "updatedAt": "2026-10-01T21:13:40.000Z",
+              "job": {
+                "attemptId": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+                "agent": "claude",
+                "state": "done",
+                "queuedAt": "2026-10-01T21:02:40.000Z",
+                "runnerId": "harbor-vps-1",
+                "claimedAt": "2026-10-01T21:02:41.000Z",
+                "leaseExpiresAt": "2026-10-01T21:08:10.000Z",
+                "finishedAt": "2026-10-01T21:05:40.000Z",
+                "outcome": {
+                  "reason": "pushed",
+                  "summary": "Set the mark colour to #1F6F78.",
+                  "commitSha": "d65cf9c09b7e45f86b32e0c1e4c0cecb9ce6bf95",
+                  "changedPaths": [
+                    "site/index.html"
+                  ]
+                },
+                "agentLabel": "Claude Code"
+              },
+              "digest": {
+                "summary": "Touched site/index.html. Acceptance check passed.",
+                "satisfies": "yes",
+                "reasons": [
+                  "Touched site/index.html.",
+                  "Acceptance check passed."
+                ],
+                "files": [
+                  {
+                    "path": "site/index.html",
+                    "status": "modified",
+                    "additions": 1,
+                    "deletions": 1
+                  }
+                ],
+                "checks": [
+                  {
+                    "path": "site/index.html",
+                    "text": "color:#1F6F78",
+                    "ok": true
+                  }
+                ],
+                "unexpectedPaths": [],
+                "missedPaths": [],
+                "controlPaths": [],
+                "headSha": "d65cf9c09b7e45f86b32e0c1e4c0cecb9ce6bf95",
+                "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527"
+              },
+              "merge": {
+                "state": "conflict",
+                "paths": [
+                  "site/index.html"
+                ],
+                "mainSha": "b0d84bd50e3a09a6c49bd77a0563c52b833c33bc",
+                "headSha": "d65cf9c09b7e45f86b32e0c1e4c0cecb9ce6bf95",
+                "checkedAt": "2026-10-01T21:08:30.000Z"
+              },
+              "review": {
+                "verdict": "satisfies",
+                "note": "Adds an inline colour to the mark. Nothing else changes.",
+                "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+                "headSha": "d65cf9c09b7e45f86b32e0c1e4c0cecb9ce6bf95",
+                "at": "2026-10-01T21:05:43.000Z"
+              },
+              "replacedBy": "northline-notices-5e2b--tint-the-pier-na-77de",
+              "replaces": null,
+              "discardReason": "Conflicted with main in site/index.html after \"Rename the pier mark to the night board\" shipped.",
+              "shippedSha": null,
+              "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--tint-the-pier-na-3b1c/",
+              "primary": "none",
+              "secondary": []
+            }
+          ]
+        },
+        {
+          "brief": {
+            "id": "add-the-tide-table-2b8c",
+            "task": "Add the tide table",
+            "constraints": [
+              "Static HTML only. No scripts.",
+              "Use the same serif as the notice"
+            ],
+            "acceptance": "contains site/tides.html \"High water\"\nTimes are local and read top to bottom.",
+            "paths": [
+              "site/tides.html"
+            ],
+            "createdAt": "2026-10-01T21:07:20.000Z"
+          },
+          "lane": "ship",
+          "current": {
+            "id": "northline-notices-5e2b--add-the-tide-tab-9a51",
+            "briefId": "add-the-tide-table-2b8c",
+            "number": 1,
+            "agent": "codex",
+            "agentLabel": "Codex",
+            "agentKind": "cli",
+            "status": "ready",
+            "repo": "northline-notices-5e2b--add-the-tide-tab-9a51",
+            "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+            "briefSha": "7b2e5e6f5cb0f9829479c3ae7549b4952f82c152",
+            "headSha": "aa467c8052dd79cf51bddc9d35510539530fbaeb",
+            "createdAt": "2026-10-01T21:07:20.000Z",
+            "updatedAt": "2026-10-01T21:09:52.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--add-the-tide-tab-9a51",
+              "agent": "codex",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:07:20.000Z",
+              "runnerId": "harbor-vps-2",
+              "claimedAt": "2026-10-01T21:07:26.000Z",
+              "leaseExpiresAt": "2026-10-01T21:12:20.000Z",
+              "finishedAt": "2026-10-01T21:09:50.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Added site/tides.html with four days of high and low water.",
+                "commitSha": "aa467c8052dd79cf51bddc9d35510539530fbaeb",
+                "changedPaths": [
+                  "site/tides.html"
+                ]
+              },
+              "agentLabel": "Codex"
+            },
+            "digest": {
+              "summary": "Touched site/tides.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/tides.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/tides.html",
+                  "status": "added",
+                  "additions": 24,
+                  "deletions": 0
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/tides.html",
+                  "text": "High water",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "aa467c8052dd79cf51bddc9d35510539530fbaeb",
+              "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+              "headSha": "aa467c8052dd79cf51bddc9d35510539530fbaeb",
+              "checkedAt": "2026-10-01T21:09:52.000Z"
+            },
+            "review": {
+              "verdict": "satisfies",
+              "note": "A static four-day table of high and low water. No scripts, no outside assets.",
+              "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+              "headSha": "aa467c8052dd79cf51bddc9d35510539530fbaeb",
+              "at": "2026-10-01T21:09:55.000Z"
+            },
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--add-the-tide-tab-9a51/",
+            "primary": "ship",
+            "secondary": [
+              "park",
+              "rerun"
+            ]
+          },
+          "history": []
+        }
+      ]
+    },
+    {
+      "lane": "review",
+      "tasks": [
+        {
+          "brief": {
+            "id": "tighten-the-footer-c-4e72",
+            "task": "Tighten the footer copy",
+            "constraints": [
+              "Keep the footer to one line",
+              "Do not touch the pier name"
+            ],
+            "acceptance": "contains site/index.html \"Posted nightly by the clerk.\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:10:15.000Z"
+          },
+          "lane": "review",
+          "current": {
+            "id": "northline-notices-5e2b--tighten-the-foot-c3d9",
+            "briefId": "tighten-the-footer-c-4e72",
+            "number": 1,
+            "agent": "grok",
+            "agentLabel": "Grok",
+            "agentKind": "cli",
+            "status": "ready",
+            "repo": "northline-notices-5e2b--tighten-the-foot-c3d9",
+            "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+            "briefSha": "c2c0c4328651b80999d7e84a9f598f775da8b17d",
+            "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+            "createdAt": "2026-10-01T21:10:15.000Z",
+            "updatedAt": "2026-10-01T21:12:07.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--tighten-the-foot-c3d9",
+              "agent": "grok",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:10:15.000Z",
+              "runnerId": "harbor-vps-1",
+              "claimedAt": "2026-10-01T21:10:20.000Z",
+              "leaseExpiresAt": "2026-10-01T21:14:35.000Z",
+              "finishedAt": "2026-10-01T21:12:05.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Shortened the footer; also refreshed the README blurb.",
+                "commitSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+                "changedPaths": [
+                  "README.md",
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Grok"
+            },
+            "digest": {
+              "summary": "Touched README.md and site/index.html. Outside the brief: README.md.",
+              "satisfies": "no",
+              "reasons": [
+                "Touched README.md and site/index.html.",
+                "Outside the brief: README.md."
+              ],
+              "files": [
+                {
+                  "path": "README.md",
+                  "status": "modified",
+                  "additions": 2,
+                  "deletions": 1
+                },
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 1
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "Posted nightly by the clerk.",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [
+                "README.md"
+              ],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+              "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+              "checkedAt": "2026-10-01T21:12:07.000Z"
+            },
+            "review": {
+              "verdict": "partial",
+              "note": "The footer now reads in one line. The README edit was not asked for.",
+              "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+              "at": "2026-10-01T21:12:10.000Z"
+            },
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--tighten-the-foot-c3d9/",
+            "primary": "ship-anyway",
+            "secondary": [
+              "park",
+              "rerun"
+            ]
+          },
+          "history": []
+        }
+      ]
+    },
+    {
+      "lane": "working",
+      "tasks": [
+        {
+          "brief": {
+            "id": "add-the-harbor-maste-a91e",
+            "task": "Add the harbor master's phone number",
+            "constraints": [
+              "Use the number from the shed board: 0161 555 0142",
+              "Touch only site/index.html"
+            ],
+            "acceptance": "contains site/index.html \"0161 555 0142\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:13:20.000Z"
+          },
+          "lane": "working",
+          "current": {
+            "id": "northline-notices-5e2b--add-the-harbor-m-6b33",
+            "briefId": "add-the-harbor-maste-a91e",
+            "number": 1,
+            "agent": "claude",
+            "agentLabel": "Claude Code",
+            "agentKind": "cli",
+            "status": "waiting",
+            "repo": "northline-notices-5e2b--add-the-harbor-m-6b33",
+            "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+            "briefSha": "6ca99a724e7c922a2f1627b046f8db2aa87a5646",
+            "headSha": "6ca99a724e7c922a2f1627b046f8db2aa87a5646",
+            "createdAt": "2026-10-01T21:13:20.000Z",
+            "updatedAt": "2026-10-01T21:13:49.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--add-the-harbor-m-6b33",
+              "agent": "claude",
+              "state": "running",
+              "queuedAt": "2026-10-01T21:13:20.000Z",
+              "runnerId": "harbor-vps-1",
+              "claimedAt": "2026-10-01T21:13:49.000Z",
+              "leaseExpiresAt": "2026-10-01T21:16:49.000Z",
+              "agentLabel": "Claude Code"
+            },
+            "digest": null,
+            "merge": null,
+            "review": null,
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": null,
+            "primary": "wait",
+            "secondary": [
+              "park"
+            ]
+          },
+          "history": []
+        },
+        {
+          "brief": {
+            "id": "translate-the-notice-0b6f",
+            "task": "Translate the notice into Norwegian",
+            "constraints": [
+              "Keep the English notice; add site/no/index.html",
+              "Same layout and serif"
+            ],
+            "acceptance": "contains site/no/index.html \"Brygge\"",
+            "paths": [
+              "site/no/"
+            ],
+            "createdAt": "2026-10-01T21:12:40.000Z"
+          },
+          "lane": "working",
+          "current": {
+            "id": "northline-notices-5e2b--translate-the-no-f05c",
+            "briefId": "translate-the-notice-0b6f",
+            "number": 1,
+            "agent": "cursor",
+            "agentLabel": "Cursor",
+            "agentKind": "cli",
+            "status": "waiting",
+            "repo": "northline-notices-5e2b--translate-the-no-f05c",
+            "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+            "briefSha": "8d2c06aa6f2e0e9e62c6beafbf0680fe78869dcc",
+            "headSha": "8d2c06aa6f2e0e9e62c6beafbf0680fe78869dcc",
+            "createdAt": "2026-10-01T21:12:40.000Z",
+            "updatedAt": "2026-10-01T21:12:40.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--translate-the-no-f05c",
+              "agent": "cursor",
+              "state": "queued",
+              "queuedAt": "2026-10-01T21:12:40.000Z",
+              "agentLabel": "Cursor"
+            },
+            "digest": null,
+            "merge": null,
+            "review": null,
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": null,
+            "primary": "wait",
+            "secondary": [
+              "park"
+            ]
+          },
+          "history": []
+        },
+        {
+          "brief": {
+            "id": "fix-the-broken-shed-d4c7",
+            "task": "Fix the broken shed link",
+            "constraints": [
+              "Link to site/tides.html, not the old PDF"
+            ],
+            "acceptance": "The shed link opens the tide table.",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:10:58.000Z"
+          },
+          "lane": "working",
+          "current": {
+            "id": "northline-notices-5e2b--fix-the-broken-s-2e9d",
+            "briefId": "fix-the-broken-shed-d4c7",
+            "number": 1,
+            "agent": "manual",
+            "agentLabel": "Manual (you push)",
+            "agentKind": "manual",
+            "status": "waiting",
+            "repo": "northline-notices-5e2b--fix-the-broken-s-2e9d",
+            "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+            "briefSha": "87c27aaab0d8c5880abf831195a48297761d4b67",
+            "headSha": "87c27aaab0d8c5880abf831195a48297761d4b67",
+            "createdAt": "2026-10-01T21:10:58.000Z",
+            "updatedAt": "2026-10-01T21:10:58.000Z",
+            "job": null,
+            "digest": null,
+            "merge": null,
+            "review": null,
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": null,
+            "primary": "wait",
+            "secondary": [
+              "park"
+            ]
+          },
+          "history": []
+        }
+      ]
+    },
+    {
+      "lane": "parked",
+      "tasks": [
+        {
+          "brief": {
+            "id": "add-a-storm-warning-7f19",
+            "task": "Add a storm warning banner",
+            "constraints": [
+              "Banner sits above the pier name",
+              "Plain words, no exclamation marks"
+            ],
+            "acceptance": "contains site/index.html \"Small craft warning\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:03:30.000Z"
+          },
+          "lane": "parked",
+          "current": {
+            "id": "northline-notices-5e2b--add-a-storm-warn-1d0b",
+            "briefId": "add-a-storm-warning-7f19",
+            "number": 1,
+            "agent": "cursor",
+            "agentLabel": "Cursor",
+            "agentKind": "cli",
+            "status": "parked",
+            "repo": "northline-notices-5e2b--add-a-storm-warn-1d0b",
+            "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+            "briefSha": "04ab143aef63193a5bf04723f357a09429bcb867",
+            "headSha": "3165eb09315e586ed555b61f66b5ef882254b87b",
+            "createdAt": "2026-10-01T21:03:30.000Z",
+            "updatedAt": "2026-10-01T21:07:05.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--add-a-storm-warn-1d0b",
+              "agent": "cursor",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:03:30.000Z",
+              "runnerId": "mac-mini",
+              "claimedAt": "2026-10-01T21:03:41.000Z",
+              "leaseExpiresAt": "2026-10-01T21:09:00.000Z",
+              "finishedAt": "2026-10-01T21:06:30.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Added a small craft warning above the pier name.",
+                "commitSha": "3165eb09315e586ed555b61f66b5ef882254b87b",
+                "changedPaths": [
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Cursor"
+            },
+            "digest": {
+              "summary": "Touched site/index.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/index.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 0
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "Small craft warning",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "3165eb09315e586ed555b61f66b5ef882254b87b",
+              "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+              "headSha": "3165eb09315e586ed555b61f66b5ef882254b87b",
+              "checkedAt": "2026-10-01T21:06:31.000Z"
+            },
+            "review": null,
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--add-a-storm-warn-1d0b/",
+            "primary": "unpark",
+            "secondary": [
+              "rerun"
+            ]
+          },
+          "history": []
+        }
+      ]
+    },
+    {
+      "lane": "shipped",
+      "tasks": [
+        {
+          "brief": {
+            "id": "add-the-night-clerk-e5a0",
+            "task": "Add the night clerk footer",
+            "constraints": [
+              "Do not change the pier name",
+              "Touch only site/index.html"
+            ],
+            "acceptance": "contains site/index.html \"Posted by the night clerk.\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:03:10.000Z"
+          },
+          "lane": "shipped",
+          "current": {
+            "id": "northline-notices-5e2b--add-the-night-cl-6c42",
+            "briefId": "add-the-night-clerk-e5a0",
+            "number": 1,
+            "agent": "grok",
+            "agentLabel": "Grok",
+            "agentKind": "cli",
+            "status": "shipped",
+            "repo": "northline-notices-5e2b--add-the-night-cl-6c42",
+            "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+            "briefSha": "c8666d700b52977352cb9a5abe3511f12a4d337f",
+            "headSha": "0f6b72039eb120fc0a519aba87d332ba0772c760",
+            "createdAt": "2026-10-01T21:03:10.000Z",
+            "updatedAt": "2026-10-01T21:09:10.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--add-the-night-cl-6c42",
+              "agent": "grok",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:03:10.000Z",
+              "runnerId": "harbor-vps-1",
+              "claimedAt": "2026-10-01T21:03:58.000Z",
+              "leaseExpiresAt": "2026-10-01T21:08:32.000Z",
+              "finishedAt": "2026-10-01T21:06:02.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Added the footer line.",
+                "commitSha": "0f6b72039eb120fc0a519aba87d332ba0772c760",
+                "changedPaths": [
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Grok"
+            },
+            "digest": {
+              "summary": "Touched site/index.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/index.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 0
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "Posted by the night clerk.",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "0f6b72039eb120fc0a519aba87d332ba0772c760",
+              "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "b0d84bd50e3a09a6c49bd77a0563c52b833c33bc",
+              "headSha": "0f6b72039eb120fc0a519aba87d332ba0772c760",
+              "checkedAt": "2026-10-01T21:08:30.000Z"
+            },
+            "review": {
+              "verdict": "satisfies",
+              "note": "Adds one footer line before the closing body tag.",
+              "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+              "headSha": "0f6b72039eb120fc0a519aba87d332ba0772c760",
+              "at": "2026-10-01T21:06:05.000Z"
+            },
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--add-the-night-cl-6c42/",
+            "primary": "none",
+            "secondary": []
+          },
+          "history": []
+        },
+        {
+          "brief": {
+            "id": "rename-the-pier-mark-41d7",
+            "task": "Rename the pier mark to the night board",
+            "constraints": [
+              "Keep the mark element",
+              "Touch only site/index.html"
+            ],
+            "acceptance": "contains site/index.html \"Northline night board\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:02:55.000Z"
+          },
+          "lane": "shipped",
+          "current": {
+            "id": "northline-notices-5e2b--rename-the-pier-a20e",
+            "briefId": "rename-the-pier-mark-41d7",
+            "number": 1,
+            "agent": "codex",
+            "agentLabel": "Codex",
+            "agentKind": "cli",
+            "status": "shipped",
+            "repo": "northline-notices-5e2b--rename-the-pier-a20e",
+            "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+            "briefSha": "eba96647c5f72159d0ce2cb7cf39ce82f00c94f9",
+            "headSha": "32d956cbe23f482778410b54ee362025e187185d",
+            "createdAt": "2026-10-01T21:02:55.000Z",
+            "updatedAt": "2026-10-01T21:08:30.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--rename-the-pier-a20e",
+              "agent": "codex",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:02:55.000Z",
+              "runnerId": "harbor-vps-2",
+              "claimedAt": "2026-10-01T21:03:44.000Z",
+              "leaseExpiresAt": "2026-10-01T21:07:42.000Z",
+              "finishedAt": "2026-10-01T21:05:12.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Renamed the mark to Northline night board.",
+                "commitSha": "32d956cbe23f482778410b54ee362025e187185d",
+                "changedPaths": [
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Codex"
+            },
+            "digest": {
+              "summary": "Touched site/index.html. Acceptance check passed.",
+              "satisfies": "yes",
+              "reasons": [
+                "Touched site/index.html.",
+                "Acceptance check passed."
+              ],
+              "files": [
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 1
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "Northline night board",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [],
+              "missedPaths": [],
+              "controlPaths": [],
+              "headSha": "32d956cbe23f482778410b54ee362025e187185d",
+              "baseSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "55872ac7e4a7ee6c619756e278fdda8ab1edd527",
+              "headSha": "32d956cbe23f482778410b54ee362025e187185d",
+              "checkedAt": "2026-10-01T21:05:13.000Z"
+            },
+            "review": {
+              "verdict": "satisfies",
+              "note": "Changes the mark text and nothing else.",
+              "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+              "headSha": "32d956cbe23f482778410b54ee362025e187185d",
+              "at": "2026-10-01T21:05:15.000Z"
+            },
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": "b0d84bd50e3a09a6c49bd77a0563c52b833c33bc",
+            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--rename-the-pier-a20e/",
+            "primary": "none",
+            "secondary": []
+          },
+          "history": []
+        }
+      ]
+    }
+  ],
+  "activity": [
+    {
+      "at": "2026-10-01T21:01:10.000Z",
+      "kind": "project",
+      "text": "Created Northline notices from the starter site."
+    },
+    {
+      "at": "2026-10-01T21:02:40.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Tint the pier name in channel teal\" to Claude Code.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:02:41.000Z",
+      "kind": "claimed",
+      "text": "Runner harbor-vps-1 claimed \"Tint the pier name in channel teal\" for Claude Code.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:02:55.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Rename the pier mark to the night board\" to Codex.",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "northline-notices-5e2b--rename-the-pier-a20e",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:03:10.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Add the night clerk footer\" to Grok.",
+      "briefId": "add-the-night-clerk-e5a0",
+      "attemptId": "northline-notices-5e2b--add-the-night-cl-6c42",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:03:30.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Add a storm warning banner\" to Cursor.",
+      "briefId": "add-a-storm-warning-7f19",
+      "attemptId": "northline-notices-5e2b--add-a-storm-warn-1d0b",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:03:41.000Z",
+      "kind": "claimed",
+      "text": "Runner mac-mini claimed \"Add a storm warning banner\" for Cursor.",
+      "briefId": "add-a-storm-warning-7f19",
+      "attemptId": "northline-notices-5e2b--add-a-storm-warn-1d0b",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:03:44.000Z",
+      "kind": "claimed",
+      "text": "Runner harbor-vps-2 claimed \"Rename the pier mark to the night board\" for Codex.",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "northline-notices-5e2b--rename-the-pier-a20e",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:03:50.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Post the ferry times under the tide table\" to Cursor.",
+      "briefId": "post-the-ferry-times-c3a8",
+      "attemptId": "northline-notices-5e2b--post-the-ferry-t-e270",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:03:58.000Z",
+      "kind": "claimed",
+      "text": "Runner harbor-vps-1 claimed \"Add the night clerk footer\" for Grok.",
+      "briefId": "add-the-night-clerk-e5a0",
+      "attemptId": "northline-notices-5e2b--add-the-night-cl-6c42",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:04:10.000Z",
+      "kind": "claimed",
+      "text": "Runner mac-mini claimed \"Post the ferry times under the tide table\" for Cursor.",
+      "briefId": "post-the-ferry-times-c3a8",
+      "attemptId": "northline-notices-5e2b--post-the-ferry-t-e270",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:04:30.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Mark the slipway closed on Sundays\" to Claude Code.",
+      "briefId": "mark-the-slipway-clo-5d02",
+      "attemptId": "northline-notices-5e2b--mark-the-slipway-48fa",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:04:31.000Z",
+      "kind": "claimed",
+      "text": "Runner harbor-vps-1 claimed \"Mark the slipway closed on Sundays\" for Claude Code.",
+      "briefId": "mark-the-slipway-clo-5d02",
+      "attemptId": "northline-notices-5e2b--mark-the-slipway-48fa",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:05:12.000Z",
+      "kind": "pushed",
+      "text": "Codex pushed 32d956c for \"Rename the pier mark to the night board\".",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "northline-notices-5e2b--rename-the-pier-a20e",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:05:13.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Rename the pier mark to the night board\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "northline-notices-5e2b--rename-the-pier-a20e",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:05:20.000Z",
+      "kind": "failed",
+      "text": "Cursor did not finish \"Post the ferry times under the tide table\" (agent_error): cursor-agent stopped at a login prompt it could not answer.",
+      "briefId": "post-the-ferry-times-c3a8",
+      "attemptId": "northline-notices-5e2b--post-the-ferry-t-e270",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:05:40.000Z",
+      "kind": "pushed",
+      "text": "Claude Code pushed d65cf9c for \"Tint the pier name in channel teal\".",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:05:41.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Tint the pier name in channel teal\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:06:02.000Z",
+      "kind": "pushed",
+      "text": "Grok pushed 0f6b720 for \"Add the night clerk footer\".",
+      "briefId": "add-the-night-clerk-e5a0",
+      "attemptId": "northline-notices-5e2b--add-the-night-cl-6c42",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:06:03.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Add the night clerk footer\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "add-the-night-clerk-e5a0",
+      "attemptId": "northline-notices-5e2b--add-the-night-cl-6c42",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:06:30.000Z",
+      "kind": "pushed",
+      "text": "Cursor pushed 3165eb0 for \"Add a storm warning banner\".",
+      "briefId": "add-a-storm-warning-7f19",
+      "attemptId": "northline-notices-5e2b--add-a-storm-warn-1d0b",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:06:31.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Add a storm warning banner\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "add-a-storm-warning-7f19",
+      "attemptId": "northline-notices-5e2b--add-a-storm-warn-1d0b",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:07:05.000Z",
+      "kind": "parked",
+      "text": "Parked \"Add a storm warning banner\".",
+      "briefId": "add-a-storm-warning-7f19",
+      "attemptId": "northline-notices-5e2b--add-a-storm-warn-1d0b",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:07:20.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Add the tide table\" to Codex.",
+      "briefId": "add-the-tide-table-2b8c",
+      "attemptId": "northline-notices-5e2b--add-the-tide-tab-9a51",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:07:26.000Z",
+      "kind": "claimed",
+      "text": "Runner harbor-vps-2 claimed \"Add the tide table\" for Codex.",
+      "briefId": "add-the-tide-table-2b8c",
+      "attemptId": "northline-notices-5e2b--add-the-tide-tab-9a51",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:07:40.000Z",
+      "kind": "pushed",
+      "text": "Claude Code pushed 4197aff for \"Mark the slipway closed on Sundays\".",
+      "briefId": "mark-the-slipway-clo-5d02",
+      "attemptId": "northline-notices-5e2b--mark-the-slipway-48fa",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:07:41.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Mark the slipway closed on Sundays\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "mark-the-slipway-clo-5d02",
+      "attemptId": "northline-notices-5e2b--mark-the-slipway-48fa",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:08:30.000Z",
+      "kind": "shipped",
+      "text": "Shipped \"Rename the pier mark to the night board\" to main at b0d84bd.",
+      "briefId": "rename-the-pier-mark-41d7",
+      "attemptId": "northline-notices-5e2b--rename-the-pier-a20e",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:08:30.000Z",
+      "kind": "conflict",
+      "text": "\"Tint the pier name in channel teal\" conflicts with main in site/index.html. Re-run it on current main.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-3b1c",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:09:10.000Z",
+      "kind": "shipped",
+      "text": "Shipped \"Add the night clerk footer\" to main at 96849b0.",
+      "briefId": "add-the-night-clerk-e5a0",
+      "attemptId": "northline-notices-5e2b--add-the-night-cl-6c42",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:09:11.000Z",
+      "kind": "conflict",
+      "text": "\"Mark the slipway closed on Sundays\" conflicts with main in site/index.html. Re-run it on current main.",
+      "briefId": "mark-the-slipway-clo-5d02",
+      "attemptId": "northline-notices-5e2b--mark-the-slipway-48fa",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:09:50.000Z",
+      "kind": "pushed",
+      "text": "Codex pushed aa467c8 for \"Add the tide table\".",
+      "briefId": "add-the-tide-table-2b8c",
+      "attemptId": "northline-notices-5e2b--add-the-tide-tab-9a51",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:09:52.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Add the tide table\": Touched site/tides.html. Acceptance check passed.",
+      "briefId": "add-the-tide-table-2b8c",
+      "attemptId": "northline-notices-5e2b--add-the-tide-tab-9a51",
+      "agent": "codex"
+    },
+    {
+      "at": "2026-10-01T21:10:15.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Tighten the footer copy\" to Grok.",
+      "briefId": "tighten-the-footer-c-4e72",
+      "attemptId": "northline-notices-5e2b--tighten-the-foot-c3d9",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:10:20.000Z",
+      "kind": "claimed",
+      "text": "Runner harbor-vps-1 claimed \"Tighten the footer copy\" for Grok.",
+      "briefId": "tighten-the-footer-c-4e72",
+      "attemptId": "northline-notices-5e2b--tighten-the-foot-c3d9",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:10:58.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Fix the broken shed link\" to Manual (you push).",
+      "briefId": "fix-the-broken-shed-d4c7",
+      "attemptId": "northline-notices-5e2b--fix-the-broken-s-2e9d",
+      "agent": "manual"
+    },
+    {
+      "at": "2026-10-01T21:12:05.000Z",
+      "kind": "pushed",
+      "text": "Grok pushed 5cf799b for \"Tighten the footer copy\".",
+      "briefId": "tighten-the-footer-c-4e72",
+      "attemptId": "northline-notices-5e2b--tighten-the-foot-c3d9",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:12:07.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Tighten the footer copy\": Touched README.md and site/index.html. Outside the brief: README.md.",
+      "briefId": "tighten-the-footer-c-4e72",
+      "attemptId": "northline-notices-5e2b--tighten-the-foot-c3d9",
+      "agent": "grok"
+    },
+    {
+      "at": "2026-10-01T21:12:40.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Translate the notice into Norwegian\" to Cursor.",
+      "briefId": "translate-the-notice-0b6f",
+      "attemptId": "northline-notices-5e2b--translate-the-no-f05c",
+      "agent": "cursor"
+    },
+    {
+      "at": "2026-10-01T21:13:20.000Z",
+      "kind": "dispatched",
+      "text": "Dispatched \"Add the harbor master's phone number\" to Claude Code.",
+      "briefId": "add-the-harbor-maste-a91e",
+      "attemptId": "northline-notices-5e2b--add-the-harbor-m-6b33",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:13:40.000Z",
+      "kind": "rerun",
+      "text": "Re-ran \"Tint the pier name in channel teal\" as attempt 2 on main 96849b0. Attempt 1 was discarded: Conflicted with main in site/index.html after \"Rename the pier mark to the night board\" shipped.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-77de",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:13:42.000Z",
+      "kind": "claimed",
+      "text": "Runner harbor-vps-1 claimed \"Tint the pier name in channel teal\" for Claude Code.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-77de",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:13:49.000Z",
+      "kind": "claimed",
+      "text": "Runner harbor-vps-1 claimed \"Add the harbor master's phone number\" for Claude Code.",
+      "briefId": "add-the-harbor-maste-a91e",
+      "attemptId": "northline-notices-5e2b--add-the-harbor-m-6b33",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:14:02.000Z",
+      "kind": "pushed",
+      "text": "Claude Code pushed 76f040b for \"Tint the pier name in channel teal\".",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-77de",
+      "agent": "claude"
+    },
+    {
+      "at": "2026-10-01T21:14:03.000Z",
+      "kind": "assessed",
+      "text": "Assessed \"Tint the pier name in channel teal\": Touched site/index.html. Acceptance check passed.",
+      "briefId": "tint-the-pier-name-i-9c01",
+      "attemptId": "northline-notices-5e2b--tint-the-pier-na-77de",
+      "agent": "claude"
+    }
+  ],
+  "agents": [
+    {
+      "id": "demo",
+      "label": "Demo (scripted)",
+      "kind": "demo"
+    },
+    {
+      "id": "manual",
+      "label": "Manual (you push)",
+      "kind": "manual"
+    },
+    {
+      "id": "claude",
+      "label": "Claude Code",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:14:24.000Z"
+    },
+    {
+      "id": "codex",
+      "label": "Codex",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:13:52.000Z"
+    },
+    {
+      "id": "grok",
+      "label": "Grok",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:13:31.000Z"
+    },
+    {
+      "id": "cursor",
+      "label": "Cursor",
+      "kind": "cli",
+      "lastSeenAt": "2026-10-01T21:04:10.000Z"
+    }
+  ]
+}

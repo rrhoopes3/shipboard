@@ -1,0 +1,6 @@
+{
+  "diff": "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1,3 +1,4 @@\n # Northline notices\n \n-Pier notices for the Northline night shift.\n+A pier notice for the night shift.\n+Posted nightly by the clerk.\ndiff --git a/site/index.html b/site/index.html\n--- a/site/index.html\n+++ b/site/index.html\n@@ -14,6 +14,6 @@\n   <p class=\"eyebrow\">Pier notices</p>\n   <h1 id=\"mark\">Northline night board</h1>\n   <p id=\"lede\">The tide book for this week is posted at the shed.</p>\n-<footer>Posted by the night clerk.</footer>\n+<footer>Posted nightly by the clerk.</footer>\n </body>\n </html>\n",
+  "truncated": false,
+  "base": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+  "head": "5cf799bc55a6430ae0164e06cba357e9c3878674"
+}

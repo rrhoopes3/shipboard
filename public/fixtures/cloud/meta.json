@@ -1,0 +1,4 @@
+{
+  "about": "A Cloudflare deploy with no BOARD_TOKEN secret: buttons answer 503.",
+  "extends": "harbor"
+}

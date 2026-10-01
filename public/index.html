@@ -1,18 +1,101 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Shipboard</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23102126'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23f3d48a' stroke-width='2'/%3E%3C/svg%3E">
+<meta name="color-scheme" content="dark light">
+<meta name="description" content="Agents fork. Humans ship. Nobody merges. A board where a conflicting agent fork is re-run from its brief, not resolved.">
+<title>shipboard</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Literata:opsz,wght@7..72,400;7..72,650&family=Syne:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Sans:ital,wght@0,400..700;1,400&display=swap">
+<link rel="stylesheet" href="/styles/tokens.css">
+<link rel="stylesheet" href="/styles/base.css">
+<link rel="stylesheet" href="/styles/layout.css">
+<link rel="stylesheet" href="/styles/card.css">
+<link rel="stylesheet" href="/styles/components.css">
+<link rel="stylesheet" href="/styles/home.css">
+<script src="/js/theme-init.js"></script>
+<script type="module" src="/app.js"></script>
 </head>
 <body>
-<div id="app"></div>
-<noscript><p class="noscript">Shipboard needs JavaScript to run the board.</p></noscript>
-<script src="/app.js" type="module"></script>
+
+<a class="skip" id="skip" href="#main">Skip to the board</a>
+
+<!-- Icon sprite. Strokes come from CSS (currentColor), so nothing here needs an inline style. -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-ship" viewBox="0 0 24 24"><path d="M4 12h12M11 6l6 6-6 6M20 5v14"/></symbol>
+    <symbol id="i-rerun" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5"/></symbol>
+    <symbol id="i-park" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+    <symbol id="i-unpark" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5z"/></symbol>
+    <symbol id="i-diff" viewBox="0 0 24 24"><path d="M12 4v7M8.5 7.5h7M8.5 17h7M5 21h14"/></symbol>
+    <symbol id="i-preview" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 9h18M6.5 6.8h.01M9 6.8h.01"/></symbol>
+    <symbol id="i-brief" viewBox="0 0 24 24"><path d="M12 3l7 9-7 9-7-9z"/><path d="M9.5 12h5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 7.6-1.7"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></symbol>
+    <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4.5h11l-2.5 4 2.5 4H5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2h.01"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+    <symbol id="i-commit" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M3 12h5.5M15.5 12H21"/></symbol>
+    <symbol id="i-fork" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M6 7v1.5a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V7M12 11.5V17"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2.5 2.5M14 9l2 2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-keys" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6.5 10h.01M9.5 10h.01M12.5 10h.01M15.5 10h.01M17.5 10h.01M7.5 14h9"/></symbol>
+    <symbol id="i-anchor" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="2"/><path d="M12 7.5V21M8 11h8M4.5 14a7.5 7.5 0 0 0 15 0"/></symbol>
+  </defs>
+</svg>
+
+<header class="topbar" id="topbar">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a class="brand" href="/" data-nav aria-label="shipboard, all projects">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <circle class="bm-halo" cx="16" cy="9" r="7.5"/>
+        <circle class="bm-lamp" cx="16" cy="9" r="3.2"/>
+        <path class="bm-pole" d="M16 12.5V21"/>
+        <path class="bm-pier" d="M4.5 21h23"/>
+        <path class="bm-r1" d="M12.5 24.5h7"/>
+        <path class="bm-r2" d="M13.8 27h4.4"/>
+        <path class="bm-r3" d="M15 29.5h2"/>
+      </svg>
+      <span class="brand-word">shipboard</span>
+    </a>
+    <span class="crumbs-extra" id="crumbs-extra"></span>
+  </nav>
+  <div class="topbar-tools" id="topbar-tools">
+    <span class="fixture-chip" id="fixture-chip" hidden></span>
+    <p class="live" id="live" data-state="connecting" hidden>
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="live-label" id="live-label">Connecting</span>
+      <span class="live-meta" id="live-meta"></span>
+    </p>
+    <p class="host-mode" id="host-mode" hidden></p>
+    <div class="lock" id="keys" hidden></div>
+    <div class="lock" id="lock" hidden></div>
+    <div class="theme-switch" id="theme-switch" role="radiogroup" aria-label="Theme"></div>
+    <button class="tool-btn icon-only theme-cycle" id="theme-cycle" type="button"></button>
+  </div>
+</header>
+
+<div class="view" id="view"></div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="visually-hidden" id="announcer" aria-live="polite"></div>
+
+<noscript><p>The board needs JavaScript. The API is at <a href="/api/projects">/api/projects</a>.</p></noscript>
 </body>
 </html>
