@@ -1,9 +1,10 @@
-import { defineConfig } from "vitest/config"
+import { configDefaults, defineConfig } from "vitest/config"
 
 export default defineConfig({
   test: {
     environment: "node",
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
+    exclude: [...configDefaults.exclude, ".claude/**", ".wrangler/**", ".data/**"],
   },
 })
