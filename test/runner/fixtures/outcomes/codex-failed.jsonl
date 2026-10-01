@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"0199a215-0000-7000-8000-000000000002"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"Starting on the pier heading."}}
+{"type":"turn.failed","error":{"message":"stream disconnected before completion: error sending request"}}
