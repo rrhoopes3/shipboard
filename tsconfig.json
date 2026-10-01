@@ -1,20 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "types": ["node"],
-    "rootDir": "."
+    "noUncheckedIndexedAccess": true,
+    "types": ["node"]
   },
-  "include": [
-    "worker/**/*.ts",
-    "sandbox/**/*.ts",
-    "agent/**/*.ts",
-    "test/**/*.ts",
-    "vitest.config.ts"
-  ]
+  "include": ["src/core/**/*.ts", "src/http/**/*.ts", "src/local/**/*.ts", "runner/**/*.ts", "test/**/*.ts", "vitest.config.ts"]
 }

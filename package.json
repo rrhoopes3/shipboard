@@ -1,26 +1,37 @@
 {
   "name": "shipboard",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Agents fork. Humans ship. Nobody merges. A Cloudflare Artifacts board where a conflict is re-run, not resolved.",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "dev": "tsx watch worker/src/server.ts",
-    "start": "tsx worker/src/server.ts",
+    "start": "tsx src/local/server.ts",
+    "dev": "tsx watch src/local/server.ts",
+    "runner": "tsx runner/runner.ts",
+    "agent": "tsx runner/cli.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "agent": "tsx agent/cli.ts"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/cloudflare/tsconfig.json",
+    "cf:types": "wrangler types src/cloudflare/worker-configuration.d.ts",
+    "cf:dev": "wrangler dev",
+    "cf:check": "wrangler deploy --dry-run --outdir .wrangler/dry",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.6",
-    "hono": "^4.10.3"
+    "diff": "^8.0.2",
+    "hono": "^4.10.3",
+    "isomorphic-git": "^1.42.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261001.1",
     "@types/node": "^24.6.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.146.0"
   }
 }
