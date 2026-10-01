@@ -54,7 +54,7 @@ const digest = obj<Digest>({
 const merge = obj<MergeReport>({ state: lit("clean", "conflict"), paths: arr(str), mainSha: sha40, headSha: sha40, checkedAt: iso })
 const review = obj<Review>({ verdict: lit("satisfies", "partial", "off-brief"), note: str, model: str, headSha: sha40, at: iso })
 const outcome = obj<JobOutcome>({
-  reason: lit("pushed", "no_changes", "agent_error", "timeout", "auth", "brief_mismatch", "unsafe_repo_config", "push_rejected", "lease_expired"),
+  reason: lit("pushed", "no_changes", "agent_error", "timeout", "auth", "brief_mismatch", "unsafe_repo_config", "push_rejected", "lease_expired", "cancelled"),
   summary: str,
   commitSha: optional(sha40),
   changedPaths: optional(arr(str)),
@@ -73,6 +73,7 @@ const jobView = obj<JobView>({
   leaseExpiresAt: optional(iso),
   finishedAt: optional(iso),
   outcome: optional(outcome),
+  requeues: optional(num),
   agentLabel: str,
 })
 const attemptView = obj<AttemptView>({
