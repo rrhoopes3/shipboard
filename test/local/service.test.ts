@@ -1,14 +1,17 @@
 import path from "node:path"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { defaultAgents } from "../../src/core/agents.ts"
 import { GitWorkspace } from "../../src/core/git.ts"
-import type { ReviewerPort } from "../../src/core/ports.ts"
+import type { CorePorts, ReviewerPort } from "../../src/core/ports.ts"
 import { ProjectService } from "../../src/core/service.ts"
 import type { Review } from "../../src/core/types.ts"
 import { JsonStateStore } from "../../src/local/state.ts"
 import { allTasks, boot, cleanup, quiet, tempDir } from "./helpers.ts"
 
-afterEach(cleanup)
+afterEach(async () => {
+  vi.restoreAllMocks()
+  await cleanup()
+})
 
 describe("ProjectService on its own ports", () => {
   it("asks the reviewer about each new head and routes off-brief work to review", async () => {
@@ -163,5 +166,140 @@ describe("ProjectService on its own ports", () => {
     expect(finished.activity.map((item) => item.kind)).toEqual(expect.arrayContaining(["failed", "pushed", "assessed"]))
     await service.onPushEvent({ repo: attemptId, ref: "refs/heads/main", after: pushed.sha })
     expect((await service.board({ reconcile: false })).version).toBe(finished.version)
+  })
+
+  it("uses Git's current head despite lagging metadata and refreshes a divergent fork after main moves", async () => {
+    const server = await boot()
+    const dir = await tempDir()
+    const id = "laggy-head-0001"
+    const service = new ProjectService(id,
+      { artifacts: server.host.artifacts, state: new JsonStateStore(path.join(dir, `${id}.json`)), log: quiet },
+      { agents: defaultAgents() })
+    await service.init({ id, name: "Laggy head" })
+    const { attemptId } = await service.dispatch({ task: "Edit page", paths: ["site/index.html"], agent: "manual" })
+    const briefSha = allTasks(await service.board({ reconcile: false }))[0]!.current.briefSha
+    const git = new GitWorkspace(server.host.artifacts)
+    const first = await git.commit(attemptId, { "site/index.html": "<p>first</p>\n" }, "first")
+    const actualHead = server.host.artifacts.head.bind(server.host.artifacts)
+    const head = vi.spyOn(server.host.artifacts, "head").mockImplementation((repo, branch) =>
+      repo === attemptId ? Promise.resolve(briefSha) : actualHead(repo, branch))
+    const firstView = await service.pushed(attemptId, first.sha)
+    expect(allTasks(firstView)[0]?.current.headSha).toBe(first.sha)
+
+    const second = await git.commit(attemptId, { "site/index.html": "<p>second</p>\n" }, "second")
+    const main = await git.commit(id, { "site/index.html": "<p>main</p>\n" }, "main")
+    await service.onPushEvent({ repo: id, ref: "refs/heads/main", after: main.sha })
+    const board = await service.board({ reconcile: false })
+    const current = allTasks(board)[0]!.current
+    expect(board.project.mainSha).toBe(main.sha)
+    expect(current.headSha).toBe(second.sha)
+    expect(current.merge?.mainSha).toBe(main.sha)
+    expect(current.merge?.headSha).toBe(second.sha)
+    expect(current.merge?.state).toBe("conflict")
+    expect(head.mock.calls.some(([repo]) => repo === attemptId)).toBe(false)
+  })
+
+  it("refreshes the merge when a fork returns to its stored head between trial and assessment", async () => {
+    const server = await boot()
+    const dir = await tempDir()
+    const id = "head-race-0001"
+    const service = new ProjectService(id,
+      { artifacts: server.host.artifacts, state: new JsonStateStore(path.join(dir, `${id}.json`)), log: quiet },
+      { agents: defaultAgents() })
+    await service.init({ id, name: "Head race" })
+    const { attemptId } = await service.dispatch({ task: "Edit page", paths: ["site/index.html"], agent: "manual" })
+    const git = new GitWorkspace(server.host.artifacts)
+    const fork = await git.commit(attemptId, { "site/index.html": "<p>fork</p>\n" }, "fork")
+    await service.pushed(attemptId, fork.sha)
+    const main = await git.commit(id, { "site/index.html": "<p>main</p>\n" }, "main")
+    const actualTrial = GitWorkspace.prototype.trialMerge
+    // Model the two reads around a force-push: trial observed Z, assessment sees stored Y.
+    const trial = vi.spyOn(GitWorkspace.prototype, "trialMerge").mockImplementationOnce(async function (mainRepo, forkRepo) {
+      return { ...await actualTrial.call(this, mainRepo, forkRepo), headSha: "f".repeat(40) }
+    })
+    await service.onPushEvent({ repo: id, ref: "refs/heads/main", after: main.sha })
+    const board = await service.board({ reconcile: false })
+    const current = allTasks(board)[0]!.current
+    expect(trial).toHaveBeenCalledOnce()
+    expect(current.headSha).toBe(fork.sha)
+    expect(current.merge?.headSha).toBe(fork.sha)
+    expect(current.merge?.mainSha).toBe(main.sha)
+    expect(current.merge?.state).toBe("conflict")
+    expect(board.activity.filter((entry) => entry.kind === "pushed")).toHaveLength(1)
+  })
+
+  it("does not fetch and assess Git again when reconcile sees unchanged heads", async () => {
+    const server = await boot()
+    const dir = await tempDir()
+    const id = "unchanged-head-0001"
+    let time = Date.now()
+    const service = new ProjectService(id, {
+      artifacts: server.host.artifacts,
+      state: new JsonStateStore(path.join(dir, `${id}.json`)),
+      clock: { now: () => new Date(time) },
+      log: quiet,
+    }, { agents: defaultAgents() })
+    await service.init({ id, name: "Unchanged head" })
+    const { attemptId } = await service.dispatch({ task: "Write a file", paths: ["a.txt"], agent: "manual" })
+    const git = new GitWorkspace(server.host.artifacts)
+    const fork = await git.commit(attemptId, { "a.txt": "ready\n" }, "work")
+    const before = await service.pushed(attemptId, fork.sha)
+    const assess = vi.spyOn(GitWorkspace.prototype, "assess")
+    const head = vi.spyOn(server.host.artifacts, "head")
+    time += 11_000
+    const after = await service.board()
+    expect(head.mock.calls.map(([repo]) => repo).sort()).toEqual([id, attemptId].sort())
+    expect(assess).not.toHaveBeenCalled()
+    expect(after.lanes).toEqual(before.lanes)
+  })
+
+  it("clears an old review when a new head is assessed without a reviewer", async () => {
+    const server = await boot()
+    const dir = await tempDir()
+    const id = "review-head-0001"
+    const state = new JsonStateStore(path.join(dir, `${id}.json`))
+    const ports: CorePorts = {
+      artifacts: server.host.artifacts,
+      state,
+      reviewer: { review: async ({ headSha }) => ({ verdict: "off-brief", note: "Old head", model: "fake", headSha, at: new Date().toISOString() }) },
+      log: quiet,
+    }
+    const service = new ProjectService(id, ports, { agents: defaultAgents() })
+    await service.init({ id, name: "Review head" })
+    const { attemptId } = await service.dispatch({ task: "Write a file", paths: ["a.txt"], agent: "manual" })
+    const git = new GitWorkspace(server.host.artifacts)
+    const first = await git.commit(attemptId, { "a.txt": "first\n" }, "first")
+    expect(allTasks(await service.pushed(attemptId, first.sha))[0]?.current.review?.headSha).toBe(first.sha)
+    ports.reviewer = undefined
+    const second = await git.commit(attemptId, { "a.txt": "second\n" }, "second")
+    const board = await service.pushed(attemptId, second.sha)
+    expect(allTasks(board)[0]?.current.review).toBeNull()
+    expect((await state.load())?.attempts.find((attempt) => attempt.id === attemptId)?.review).toBeNull()
+  })
+
+  it("reconciles only live attempts even with a long retired history", async () => {
+    const server = await boot()
+    const dir = await tempDir()
+    const id = "history-head-0001"
+    const state = new JsonStateStore(path.join(dir, `${id}.json`))
+    const original = new ProjectService(id, { artifacts: server.host.artifacts, state, log: quiet }, { agents: defaultAgents() })
+    await original.init({ id, name: "History head" })
+    await original.dispatch({ task: "Live work", paths: ["a.txt"], agent: "manual" })
+    const stored = (await state.load())!
+    const live = stored.attempts[0]!
+    for (let i = 0; i < 150; i++) stored.attempts.push({ ...live, id: `${live.id}-old-${i}`, repo: `${live.repo}-old-${i}`, status: "discarded" })
+    stored.reconciledAt = 0
+    const actualHead = server.host.artifacts.head.bind(server.host.artifacts)
+    const head = vi.spyOn(server.host.artifacts, "head").mockImplementation((repo, branch) => {
+      if (repo.includes("-old-")) throw new Error("retired repo was checked")
+      return actualHead(repo, branch)
+    })
+    const fresh = new ProjectService(id, {
+      artifacts: server.host.artifacts,
+      state: { load: async () => stored, save: async () => {} },
+      log: quiet,
+    }, { agents: defaultAgents() })
+    await fresh.board()
+    expect(head.mock.calls.map(([repo]) => repo).sort()).toEqual([id, live.repo].sort())
   })
 })

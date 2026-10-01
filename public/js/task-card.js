@@ -24,10 +24,6 @@ function pushedAt(a) {
   return a.digest ? a.merge?.checkedAt ?? a.updatedAt : a.updatedAt
 }
 
-function currentReview(a) {
-  return a.review && a.review.headSha === a.headSha ? a.review : null
-}
-
 const isWaiting = (a) => a.status === "waiting" || (a.status === "ready" && !a.merge && !a.digest)
 
 /** The newest shipped activity at or before `at`, for the main timeline. */
@@ -91,6 +87,7 @@ export function cardSignature(task, ctx) {
     [...ctx.open].sort(),
     ctx.confirm,
     ctx.busy,
+    ctx.previewAvailable,
     a.job && a.job.state === "queued" ? agentOnline(ctx.agents.get(a.agent)) : null,
   ])
 }
@@ -119,7 +116,7 @@ export function renderCard(task, ctx) {
   const primary = primaryArea(task, ctx)
   if (primary) card.append(primary)
   card.append(cardTools(task, ctx))
-  if (ctx.open.has("preview") && a.previewUrl && !compact) card.append(previewExpand(task, ctx))
+  if (ctx.open.has("preview") && a.previewUrl && !compact && ctx.previewAvailable) card.append(previewExpand(task, ctx))
   if (ctx.open.has("brief")) card.append(h("div", { class: "expand", id: `brief-${brief.id}` }, briefDetail(brief, a)))
   return card
 }
@@ -279,7 +276,7 @@ function currentNode(task, ctx) {
   if (a.merge && a.merge.state === "conflict") node.append(conflictBox(a, ctx))
   const notes = noteItems(d)
   if (notes.length) node.append(h("ul", { class: "notes" }, notes.map((n) => h("li", { "data-tone": n.tone }, icon(n.icon), n.text))))
-  if (currentReview(a)) node.append(reviewBlock(a.review))
+  if (a.review) node.append(reviewBlock(a.review))
   return node
 }
 
@@ -517,32 +514,45 @@ function primaryArea(task, ctx) {
 }
 
 export function shipAnywayWhy(a) {
-  const d = a.digest
-  const review = currentReview(a)
-  if (d && d.controlPaths.length) return `It changes ${listPhrase(d.controlPaths)} under .shipboard/. Read the diff before you ship it.`
-  if (d && d.unexpectedPaths.length) return `${listPhrase(d.unexpectedPaths)} ${d.unexpectedPaths.length === 1 ? "is" : "are"} outside the brief. Shipping is still your call.`
-  if (d && d.checks.some((c) => !c.ok)) return "An acceptance check failed. Shipping is still your call."
-  if (review?.verdict === "off-brief") return `The review reads it as off brief: ${review.note.replace(/\.$/, "")}. Shipping is still your call.`
-  if (review?.verdict === "partial") return `The review only partly confirms the brief: ${review.note.replace(/\.$/, "")}. Shipping is still your call.`
-  if (d && d.missedPaths.length) return `It did not touch ${listPhrase(d.missedPaths)}. Shipping is still your call.`
+  const concern = shipAnywayConcern(a)
+  if (concern.kind === "control") return `It changes ${listPhrase(concern.paths)} under .shipboard/. Read the diff before you ship it.`
+  if (concern.kind === "unexpected") return `${listPhrase(concern.paths)} ${concern.paths.length === 1 ? "is" : "are"} outside the brief. Shipping is still your call.`
+  if (concern.kind === "check") return "An acceptance check failed. Shipping is still your call."
+  if (concern.kind === "off-brief") return `The review reads it as off brief: ${concern.note.replace(/\.$/, "")}. Shipping is still your call.`
+  if (concern.kind === "partial") return `The review only partly confirms the brief: ${concern.note.replace(/\.$/, "")}. Shipping is still your call.`
+  if (concern.kind === "missed") return `It did not touch ${listPhrase(concern.paths)}. Shipping is still your call.`
   return "The digest could not confirm the brief. Shipping is still your call."
+}
+
+function shipAnywayConcern(a) {
+  const d = a.digest
+  const review = a.review
+  if (d?.controlPaths.length) return { kind: "control", paths: d.controlPaths }
+  if (d?.unexpectedPaths.length) return { kind: "unexpected", paths: d.unexpectedPaths }
+  if (d?.checks.some((check) => !check.ok)) return { kind: "check" }
+  if (review?.verdict === "off-brief" || review?.verdict === "partial") return { kind: review.verdict, note: review.note }
+  if (d?.missedPaths.length) return { kind: "missed", paths: d.missedPaths }
+  return { kind: "generic" }
+}
+
+export function shipAnywayQuestion(a) {
+  const concern = shipAnywayConcern(a)
+  if (concern.kind === "control") return `Ship it with changes to ${listPhrase(concern.paths)} under .shipboard/?`
+  if (concern.kind === "unexpected") return `Ship it with ${listPhrase(concern.paths)} outside the brief?`
+  if (concern.kind === "check") return "Ship it although an acceptance check failed?"
+  if (concern.kind === "off-brief") return "Ship it although the review reads it as off brief?"
+  if (concern.kind === "partial") return "Ship it although the review only partly confirms the brief?"
+  if (concern.kind === "missed") return `Ship it without touching ${listPhrase(concern.paths)}?`
+  return "Ship it although the digest could not confirm the brief?"
 }
 
 function confirmBox(task, ctx) {
   const { brief, current: a } = task
-  const review = currentReview(a)
   const c = ctx.confirm
   let text
   let yes
   if (c.action === "ship-anyway") {
-    const d = a.digest
-    text = d && d.unexpectedPaths.length
-      ? `Ship it with ${listPhrase(d.unexpectedPaths)} outside the brief?`
-      : review?.verdict === "off-brief"
-        ? "Ship it although the review reads it as off brief?"
-        : review?.verdict === "partial"
-          ? "Ship it although the review only partly confirms the brief?"
-        : "Ship it although the digest could not confirm the brief?"
+    text = shipAnywayQuestion(a)
     yes = { label: "Yes, ship it", iconName: "ship" }
   } else {
     const size = diffSize(a.digest)
@@ -668,7 +678,8 @@ function cardTools(task, ctx) {
   const pushed = Boolean(a.previewUrl)
   const tools = h("div", { class: "card-tools" })
   if (!compact) {
-    const open = ctx.open.has("preview")
+    const available = pushed && ctx.previewAvailable
+    const open = available && ctx.open.has("preview")
     tools.append(
       h(
         "button",
@@ -676,11 +687,11 @@ function cardTools(task, ctx) {
           class: "toggle",
           type: "button",
           "data-key": key(brief.id, "preview"),
-          "aria-expanded": pushed ? String(open) : null,
-          "aria-controls": pushed && open ? `prev-${brief.id}` : null,
-          "aria-disabled": pushed ? null : "true",
-          title: pushed ? "Show this attempt's preview" : "No push yet, so nothing to preview",
-          onclick: () => pushed && ctx.on.toggle(task, "preview"),
+          "aria-expanded": available ? String(open) : null,
+          "aria-controls": open ? `prev-${brief.id}` : null,
+          "aria-disabled": available ? null : "true",
+          title: available ? "Show this attempt's preview" : pushed ? "Preview is unavailable. The board will retry." : "No push yet, so nothing to preview",
+          onclick: () => available && ctx.on.toggle(task, "preview"),
         },
         icon("preview"),
         "Preview",

@@ -62,6 +62,9 @@ export function mountBoard(view, projectId) {
     stopped: false,
     state: "loading",
     privateRead: false,
+    boardToken: null,
+    previewAvailable: false,
+    previewEpoch: 0,
   }
 
   setCrumbs([{ label: "Projects", href: href("/") }, { label: projectId }])
@@ -190,8 +193,11 @@ export function mountBoard(view, projectId) {
   function showState({ tone, iconName, title, text, actions }) {
     s.board = null
     s.state = "error"
+    s.previewAvailable = false
     cards.clear()
     laneEls.clear()
+    closeSheet()
+    inspector.reset()
     hideKeys()
     clear(root).append(
       h(
@@ -253,6 +259,7 @@ export function mountBoard(view, projectId) {
       isNewAttempt: (aid) => !s.seenAttempts.has(aid),
       isNewDiscard: (aid) => !s.seenDiscards.has(aid),
       previewSrc,
+      previewAvailable: s.previewAvailable,
       on: handlers,
     }
   }
@@ -319,8 +326,10 @@ export function mountBoard(view, projectId) {
     clear(el.note).append(
       shipped && title ? `after “${title}” shipped ${when(shipped.at)}` : `${p.seed === "import" ? "as imported" : "as seeded"} ${when(p.createdAt)}`,
     )
-    el.preview.href = previewSrc(p.previewUrl)
-    el.preview.title = `Main at ${short(p.mainSha)}, served sandboxed`
+    if (s.previewAvailable) el.preview.href = previewSrc(p.previewUrl)
+    else el.preview.removeAttribute("href")
+    el.preview.setAttribute("aria-disabled", String(!s.previewAvailable))
+    el.preview.title = s.previewAvailable ? `Main at ${short(p.mainSha)}, served sandboxed` : "Preview is unavailable. The board will retry."
     const block = mutationBlock()
     clear(el.dispatchBtn).append(icon(block ? "lock" : "plus"), "Dispatch a brief", h("kbd", { "aria-hidden": "true" }, "N"))
     setAriaDisabled(el.dispatchBtn, Boolean(block))
@@ -605,26 +614,52 @@ export function mountBoard(view, projectId) {
     if (!s.stopped) s.timer = setTimeout(poll, ms)
   }
 
+  function setPreviewAvailable(available) {
+    if (s.previewAvailable === available) return
+    s.previewAvailable = available
+    if (s.board) render()
+  }
+
+  async function preparePreview(token, epoch) {
+    try {
+      const config = await api.config()
+      if (s.stopped || getToken() !== token || s.previewEpoch !== epoch) return
+      s.privateRead = !config.publicRead && Boolean(config.boardAuth)
+      await api.ensurePreviewSession(projectId)
+      if (s.stopped || getToken() !== token || s.previewEpoch !== epoch) return
+      setPreviewAvailable(true)
+    } catch {
+      if (s.stopped || getToken() !== token || s.previewEpoch !== epoch) return
+      setPreviewAvailable(false)
+    }
+  }
+
   async function poll() {
     if (s.stopped || s.inFlight) return
     if (document.hidden && s.board) return
     s.inFlight = true
+    const token = getToken()
     try {
       const res = await api.board(projectId, s.board ? s.board.version : null)
-      s.privateRead = await api.ensurePreviewSession(projectId)
       s.inFlight = false
       if (s.stopped) return
+      if (getToken() !== token) return schedule(0)
       const wasOffline = s.fails > 0
       s.fails = 0
       s.polledAt = Date.now()
       s.lastOkAt = now()
       pulseLive()
-      if (res.status === 200 && res.board) apply(res.board, { animate: true })
+      if (res.status === 200 && res.board) {
+        s.boardToken = token
+        apply(res.board, { animate: true })
+      }
       else if (wasOffline) renderBanners()
+      void preparePreview(token, s.previewEpoch)
       schedule(POLL_MS)
     } catch (err) {
       s.inFlight = false
       if (s.stopped) return
+      if (getToken() !== token) return schedule(0)
       if (err.status === 401) return showReadLock()
       if (err.status === 404) return showMissing()
       s.fails += 1
@@ -693,6 +728,7 @@ export function mountBoard(view, projectId) {
       return false
     }
     const a = task.current
+    const token = getToken()
     s.busy = { briefId: task.brief.id, action: opts.busyAs ?? action }
     renderLanes()
     try {
@@ -702,6 +738,7 @@ export function mountBoard(view, projectId) {
       else if (action === "park") res = await api.park(a.id)
       else if (action === "unpark") res = await api.unpark(a.id)
       else throw new Error(`Unknown action ${action}`)
+      if (s.stopped || getToken() !== token) return false
       s.busy = null
       s.confirm = null
       if (res.board) apply(res.board, { animate: true, follow: task.brief.id })
@@ -709,6 +746,7 @@ export function mountBoard(view, projectId) {
       if (res.notice) toast(res.fixture ? "info" : "ok", res.notice)
       return !res.fixture
     } catch (err) {
+      if (s.stopped || getToken() !== token) return false
       s.busy = null
       s.confirm = null
       renderLanes()
@@ -746,6 +784,7 @@ export function mountBoard(view, projectId) {
     getBoard: () => s.board,
     run,
     previewSrc,
+    previewAvailable: () => s.previewAvailable,
   })
 
   const dispatch = createDispatch({
@@ -818,21 +857,37 @@ export function mountBoard(view, projectId) {
   document.addEventListener("keydown", onKey)
   document.addEventListener("visibilitychange", onVisible)
   const offAuth = onAuthChange(() => {
+    s.previewEpoch += 1
+    s.busy = null
+    s.confirm = null
     if (s.privateRead && !getToken()) {
+      s.previewAvailable = false
       showReadLock()
       return
     }
+    if (s.board && s.boardToken !== getToken()) {
+      s.previewAvailable = false
+      s.board = null
+      s.state = "loading"
+      cards.clear()
+      laneEls.clear()
+      hideKeys()
+      closeSheet()
+      inspector.reset()
+      showLoading()
+      pollNow()
+      return
+    }
+    setPreviewAvailable(false)
     if (s.state === "error" && !s.board) {
       showLoading()
       pollNow()
       return
     }
     if (s.board) {
-      if (s.privateRead) pollNow()
-      else {
-        for (const card of cards.values()) delete card.dataset.sig
-        render()
-      }
+      for (const card of cards.values()) delete card.dataset.sig
+      render()
+      pollNow()
     }
   })
   s.ticker = setInterval(tick, 1000)

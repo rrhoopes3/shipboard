@@ -6,6 +6,23 @@ afterEach(() => {
 })
 
 describe("private preview session", () => {
+  it("allows tokenless local reads and previews when no board token is configured", async () => {
+    vi.stubGlobal("location", { search: "" })
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem() {}, removeItem() {} })
+    vi.stubGlobal("window", { addEventListener() {} })
+    const fetch = vi.fn((path) => {
+      if (path === "/api/config") return Promise.resolve(Response.json({ mode: "local", publicRead: false, boardAuth: false }))
+      if (path === "/api/projects/open-local") return Promise.resolve(Response.json({ version: 1, lanes: [] }))
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    vi.stubGlobal("fetch", fetch)
+
+    const { api } = await import("../../public/js/api.js")
+    expect((await api.board("open-local", null)).board.version).toBe(1)
+    expect(await api.ensurePreviewSession("open-local")).toBe(true)
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
   it("does not render with a grant issued after the user locks, and clears the cookie", async () => {
     const values = new Map()
     const localStorage = {

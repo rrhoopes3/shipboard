@@ -38,7 +38,7 @@ export function attemptView(state: ProjectState, attempt: Attempt, agents: reado
     job: job ? { ...job, agentLabel: agentLabel(agents, job.agent) } : null,
     digest: attempt.digest,
     merge: attempt.merge,
-    review: attempt.review,
+    review: attempt.review?.headSha === attempt.headSha ? attempt.review : null,
     replacedBy: attempt.replacedBy,
     replaces: attempt.replaces,
     discardReason: attempt.discardReason,

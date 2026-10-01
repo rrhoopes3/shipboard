@@ -44,10 +44,6 @@ export function demoEdit(id: string | undefined): DemoEdit | null {
   return DEMO_EDITS[id] ?? null
 }
 
-export function supportsDemo(id: string | undefined): boolean {
-  return demoEdit(id) !== null
-}
-
 export const DEMO_AUTHOR = { name: "Demo (scripted)", email: "demo@users.noreply.local" } as const
 
 export type DemoResult =

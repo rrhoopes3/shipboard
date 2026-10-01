@@ -45,8 +45,8 @@ export function highlightJson(pre, json) {
  * lookup(attemptId) → { task, attempt } from the current board, or null.
  * run(task, action, opts) → Promise<boolean> performs a mutation through the board.
  */
-export function createInspector({ lookup, getBoard, run, previewSrc }) {
-  const ui = { attemptId: null, tab: "diff", page: new Map(), diffs: new Map(), shown: { diff: "", preview: "" } }
+export function createInspector({ lookup, getBoard, run, previewSrc, previewAvailable = () => true }) {
+  const ui = { attemptId: null, tab: "diff", page: new Map(), diffs: new Map(), shown: { diff: "", preview: "" }, generation: 0 }
 
   const eyebrow = h("p", { class: "eyebrow", id: "inspect-eyebrow" })
   const title = h("h2", { class: "sheet-title", id: "inspect-title", tabindex: "-1" })
@@ -131,6 +131,19 @@ export function createInspector({ lookup, getBoard, run, previewSrc }) {
     render()
   }
 
+  function reset() {
+    if (!sheet.hidden) closeSheet({ restore: false })
+    ui.generation += 1
+    ui.attemptId = null
+    ui.page.clear()
+    ui.diffs.clear()
+    ui.shown = { diff: "", preview: "" }
+    clear(eyebrow)
+    clear(title)
+    clear(sub)
+    for (const pane of Object.values(panes)) clear(pane)
+  }
+
   function render() {
     const found = current()
     if (!found) return
@@ -157,6 +170,7 @@ export function createInspector({ lookup, getBoard, run, previewSrc }) {
     const k = `${a.id}@${a.headSha}@${a.status}`
     if (ui.shown.diff === k) return
     ui.shown.diff = k
+    const generation = ui.generation
     clear(pane)
     if (a.status === "discarded") {
       pane.append(
@@ -182,7 +196,7 @@ export function createInspector({ lookup, getBoard, run, previewSrc }) {
     }
     promise.then(
       (result) => {
-        if (ui.shown.diff !== k) return
+        if (ui.generation !== generation || ui.shown.diff !== k) return
         const d = a.digest
         clear(body).append(
           renderDiff(result, {
@@ -192,7 +206,7 @@ export function createInspector({ lookup, getBoard, run, previewSrc }) {
         )
       },
       (err) => {
-        if (ui.shown.diff !== k) return
+        if (ui.generation !== generation || ui.shown.diff !== k) return
         clear(body).append(
           h(
             "div",
@@ -212,6 +226,11 @@ export function createInspector({ lookup, getBoard, run, previewSrc }) {
     if (!a.previewUrl) {
       ui.shown.preview = ""
       clear(pane).append(h("p", { class: "pane-state" }, "No push yet, so there is nothing to preview."))
+      return
+    }
+    if (!previewAvailable()) {
+      ui.shown.preview = ""
+      clear(pane).append(h("p", { class: "pane-state", role: "status" }, "Preview is unavailable. The board will retry."))
       return
     }
     const pages = previewPages(task.current.id === a.id ? task : { ...task, current: a })
@@ -406,6 +425,7 @@ export function createInspector({ lookup, getBoard, run, previewSrc }) {
   return {
     open,
     refresh,
+    reset,
     isOpen: () => Boolean(ui.attemptId) && !sheet.hidden,
     destroy() {
       if (!sheet.hidden) closeSheet({ restore: false })

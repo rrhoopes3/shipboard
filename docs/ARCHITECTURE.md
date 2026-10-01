@@ -269,7 +269,9 @@ All responses: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
 
 ## Runner (runner/runner.ts)
 
-`npm run runner -- --url <board> --agents grok,claude [--concurrency 2]`. Config in
+`npm run runner -- --url <board> --agents codex,claude [--concurrency 2]`. Grok's
+`--always-approve` and Cursor's `--force` templates require an explicit `allowBypass` setting
+on an isolated runner. Grok's own sandbox is best-effort and does not waive that gate. Config in
 `shipboard.runner.json` (agent templates; see `runner/agents.ts` for defaults). Per job: claim →
 read token → `git clone` in a fresh temp dir with the token in env-scoped git config
 (`GIT_CONFIG_COUNT`), never argv or `.git/config` → verify the brief file at the first commit after

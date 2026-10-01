@@ -119,8 +119,11 @@ npx wrangler artifacts repos list --namespace shipboard   # the project repo and
 
 The parser accepts the [documented push event](https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/#pushed):
 `type: "cf.artifacts.repo.pushed"`, `source.namespace`, `source.repoName`, `payload.ref`, and
-`payload.after`. The example in `test/cloudflare/push-workflow.test.ts` is synthetic. It is not
-evidence that a deployed trigger delivered that body. On 2026-10-01, `npx wrangler whoami`
+`payload.after` (hexadecimal SHAs are normalized to lowercase). An unsupported envelope fails the
+Workflow with an explicit error instead of reporting a successful skip; inspect the instance's
+input before adding support for a different envelope. The example in
+`test/cloudflare/push-workflow.test.ts` is synthetic, not evidence that a deployed trigger
+delivered that body. On 2026-10-01, `npx wrangler whoami`
 reported no authenticated account, so live verification remains pending.
 
 After login, use the separate dev board below to verify the integration:
@@ -189,7 +192,9 @@ Each push should start a `shipboard-push` Workflow instance:
 - Check with `npx wrangler workflows instances list shipboard-push`. No instances means the
   trigger is not delivering. Check the Workflow's triggers in the dashboard, and that
   `triggers.events[0].filter.namespace` matches the `artifacts` namespace in `wrangler.jsonc`.
-- An instance that `errored` shows the Durable Object's answer in its step output.
+- An instance that `errored` shows the failure in its output. An `Unsupported Artifacts push event`
+  error means the input did not match the documented event: capture that input using the procedure
+  above. An assessment-step error instead reports the Durable Object's answer.
 
 Events are not the only way pushes are noticed:
 

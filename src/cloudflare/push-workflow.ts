@@ -4,8 +4,9 @@
  * retried step. The DO's onPushEvent is idempotent per (repo, after), and reconcile catches any
  * push whose event never arrives.
  *
- * `event.payload` is the documented Artifacts event, with source.namespace/source.repoName
- * and payload.ref/payload.after. Unrecognized events are left to reconcile.
+ * Parse the documented Artifacts event from `event.payload`, with source.namespace/source.repoName
+ * and payload.ref/payload.after. An unsupported envelope fails the Workflow visibly; reconcile
+ * remains the fallback while deployment evidence is collected (docs/DEPLOY.md).
  * https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/#pushed
  */
 
@@ -13,7 +14,7 @@ import { WorkflowEntrypoint } from "cloudflare:workers"
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers"
 import { isProjectId, isRepoName, projectIdOf } from "../core/names.ts"
 import type { Env } from "./env.ts"
-import { namespaceOf, workerLog } from "./env.ts"
+import { namespaceOf } from "./env.ts"
 import { projectStub } from "./host.ts"
 
 export const PUSHED = "cf.artifacts.repo.pushed"
@@ -37,7 +38,7 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null
 }
 
-/** Read one documented push event; reject other events, deleted refs and malformed input. */
+/** Read one documented push event, normalizing its hexadecimal head. Zero denotes ref deletion. */
 export function parsePushEvent(input: unknown): PushEvent | null {
   const event = obj(input)
   if (event?.type !== PUSHED) return null
@@ -46,8 +47,8 @@ export function parsePushEvent(input: unknown): PushEvent | null {
   const repo = text(source?.repoName)
   const namespace = text(source?.namespace)
   const ref = text(payload?.ref)
-  const after = text(payload?.after)
-  if (!namespace || !repo || !isRepoName(repo) || !ref || !ref.startsWith("refs/") || !after || !SHA.test(after) || ZERO.test(after)) return null
+  const after = text(payload?.after)?.toLowerCase()
+  if (!namespace || !repo || !isRepoName(repo) || !ref || !ref.startsWith("refs/") || !after || !SHA.test(after)) return null
   return { repo, ref, after, namespace }
 }
 
@@ -72,12 +73,12 @@ type StepRunner = Pick<WorkflowStep, "do">
 export async function handlePush(env: Pick<Env, "PROJECT" | "ARTIFACTS_NAMESPACE">, payload: unknown, step: StepRunner): Promise<PushOutcome> {
   const push = parsePushEvent(payload)
   if (!push) {
-    workerLog.warn("push workflow got an event it does not understand", { sample: JSON.stringify(payload ?? null).slice(0, 300) })
-    return { skipped: "not a push event" }
+    throw new Error("Unsupported Artifacts push event. Inspect this Workflow instance's input and verify the trigger envelope; see docs/DEPLOY.md.")
   }
   const namespace = namespaceOf(env)
   if (push.namespace !== namespace) return { skipped: `namespace ${push.namespace} is not ${namespace}` }
   if (push.ref !== "refs/heads/main") return { skipped: `${push.ref} is not main` }
+  if (ZERO.test(push.after)) return { skipped: "deleted ref" }
   const projectId = projectIdOf(push.repo)
   if (!isProjectId(projectId)) return { skipped: `${push.repo} is not a shipboard repo` }
 

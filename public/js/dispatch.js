@@ -1,7 +1,7 @@
 // The dispatch drawer: write a brief, pick an agent, see the exact bytes that become the fork's
 // first commit. Re-runs commit the same bytes, so the brief is written once.
 
-import { api } from "./api.js"
+import { api, getToken } from "./api.js"
 import { explainBlock, handleAuthError, mutationBlock } from "./auth.js"
 import { agentOnline } from "./task-card.js"
 import { canonicalBrief, highlightJson } from "./inspector.js"
@@ -273,7 +273,7 @@ export function createDispatch({ projectId, getBoard, onResult }) {
       )
     }
     if (!parsed.length) {
-      accParse.append(h("li", null, h("span", { class: "acc-tag", "data-tone": "slate" }, "none"), h("span", null, "With no check the digest says unchecked, and the card lands in Needs a look.")))
+      accParse.append(h("li", null, h("span", { class: "acc-tag", "data-tone": "slate" }, "none"), h("span", null, "With no check the digest says unchecked; read the diff before shipping.")))
     }
 
     const info = chosen()
@@ -333,12 +333,17 @@ export function createDispatch({ projectId, getBoard, onResult }) {
     }
     const info = chosen()
     const input = { task: d.task, constraints: d.constraints, acceptance: d.acceptance, paths: d.paths, agent: info.id }
+    const token = getToken()
     if (info.kind === "manual" && cred.checked) input.credentials = true
     busy = true
     submit.setAttribute("aria-busy", "true")
     clear(submit).append(h("span", { class: "spinner", "aria-hidden": "true" }), "Forking main…")
     try {
       const res = await api.dispatch(projectId, input)
+      if (getToken() !== token) {
+        closeSheet()
+        return
+      }
       rememberAgent(info.id)
       if (!res.fixture) drafts.set(projectId, { task: "", constraints: "", acceptance: "", paths: "", agent: info.id, credentials: true })
       onResult(res)
@@ -348,6 +353,7 @@ export function createDispatch({ projectId, getBoard, onResult }) {
         closeSheet()
       }
     } catch (e) {
+      if (getToken() !== token) return
       if (e.status === 401 || e.status === 503) {
         closeSheet()
         handleAuthError(e)

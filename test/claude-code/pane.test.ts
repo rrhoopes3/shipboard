@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { AttemptView, BoardView, Brief } from "../../src/core/types.ts"
+import type { AttemptView, BoardView, Brief, ProjectState } from "../../src/core/types.ts"
+import { boardView as coreBoardView } from "../../src/core/views.ts"
 import { isLinkable, renderPane, type PaneModel } from "../../integrations/claude-code/hooks/pane.ts"
 import { oneLine, verdictLines, verdictOf } from "../../integrations/claude-code/hooks/verdict.ts"
 import { elements, findAll, textOf } from "./harness.ts"
@@ -94,6 +95,31 @@ function model(view: BoardView, base = BASE): PaneModel {
 }
 
 describe("pane", () => {
+  it("omits a legacy review of an older head from the pane", () => {
+    const current = attempt({ review: { ...attempt().review!, verdict: "off-brief", note: "Stale review of an older head", headSha: sha("f") } })
+    const { job: _job, agentLabel: _label, agentKind: _kind, previewUrl: _preview, primary: _primary, secondary: _secondary, ...storedAttempt } = current
+    const state: ProjectState = {
+      schema: 1,
+      version: 7,
+      project: { id: "harbor-notes-3f2a", name: "Harbor notes", description: "", createdAt: "2026-10-01T11:00:00.000Z", repo: "harbor-notes-3f2a", mainSha: sha("d"), seed: "harbor" },
+      briefs: [brief],
+      attempts: [storedAttempt],
+      jobs: [],
+      activity: [],
+      reconciledAt: 0,
+    }
+    const view = coreBoardView(state, [])
+    const verdict = verdictOf(view, ID, BASE)!
+    const lines = verdictLines(verdict).join("\n")
+    const text = textOf(renderPane(elements, model(view)))
+    expect(view.lanes.find((lane) => lane.lane === "ship")?.tasks).toHaveLength(1)
+    expect(lines).not.toContain("Review (")
+    expect(lines).not.toContain("Stale review of an older head")
+    expect(text).not.toContain("off-brief")
+    expect(text).not.toContain("Stale review of an older head")
+    expect(text).toContain("▶ Ship")
+  })
+
   it("shows a clean, satisfied fork with its checks, review, absolute preview URL and the Ship action", () => {
     const tree = renderPane(elements, model(board(attempt(), "ship")))
     const text = textOf(tree)

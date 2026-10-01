@@ -9,7 +9,7 @@
 
 import { DEMO_AGENT, agentKind, agentLabel, findAgent } from "./agents.ts"
 import { briefBytes, briefFile, bytesEqual, makeBrief, validateDispatch } from "./brief.ts"
-import { runDemoEdit, supportsDemo } from "./demo.ts"
+import { demoEdit, runDemoEdit } from "./demo.ts"
 import { buildDigest, parseChecks } from "./digest.ts"
 import { GitWorkspace } from "./git.ts"
 import { validateCreateProject, validateOutcome } from "./inputs.ts"
@@ -65,6 +65,7 @@ type Tx = {
   saved: string
   /** Work to start once the mutex is released (demo jobs). */
   after: Array<() => void>
+  attemptsByRepo?: Map<string, Attempt>
 }
 
 const SHA = /^[0-9a-f]{40}$/
@@ -167,7 +168,7 @@ export class ProjectService implements ProjectHandle {
     const state = await this.snapshot()
     const job = this.leasedJob(state, attemptId, runnerId)
     const attempt = this.attemptOf(state, attemptId)
-    const writable = attempt.status === "waiting" || attempt.status === "ready"
+    const writable = this.live(attempt)
     if (!writable && (scope === "write" || attempt.status !== "parked")) {
       throw new PortError(`That attempt is ${attempt.status}; it takes no more pushes.`, 409, "not_live")
     }
@@ -286,6 +287,7 @@ export class ProjectService implements ProjectHandle {
       const fresh = await this.createAttempt(brief, agentId, nextAttemptNumber(tx.state, brief.id), old.id, tx.state)
       const now = this.now()
       tx.state.attempts.push(fresh)
+      tx.attemptsByRepo?.set(fresh.repo, fresh)
       old.status = "discarded"
       old.replacedBy = fresh.id
       old.discardReason = reason
@@ -705,10 +707,10 @@ export class ProjectService implements ProjectHandle {
       await this.retrialOthers(tx, null)
       return
     }
-    const attempt = tx.state.attempts.find((item) => item.repo === repo)
+    const attempt = (tx.attemptsByRepo ??= new Map(tx.state.attempts.map((item) => [item.repo, item]))).get(repo)
     if (!attempt || !this.live(attempt)) return
-    const head = await this.ports.artifacts.head(repo)
-    if (!head || this.alreadySeen(attempt, head)) return
+    if (sha && this.alreadySeen(attempt, sha) &&
+      (attempt.status === "waiting" || (attempt.merge?.mainSha === tx.state.project.mainSha && attempt.merge.headSha === attempt.headSha))) return
     await this.assessAttempt(tx, attempt)
   }
 
@@ -717,7 +719,7 @@ export class ProjectService implements ProjectHandle {
     if (!findAgent(this.options.agents, id)) {
       throw new PortError(`There is no agent called "${id.slice(0, 40)}". Pick one from the list.`, 400)
     }
-    if (agentKind(this.options.agents, id) === "demo" && !supportsDemo(brief.demo)) {
+    if (agentKind(this.options.agents, id) === "demo" && !demoEdit(brief.demo)) {
       throw new PortError("The demo agent only runs the harbor demo briefs. Pick a real agent.", 400)
     }
     return id
@@ -750,6 +752,7 @@ export class ProjectService implements ProjectHandle {
     }
     tx.state.briefs.push(brief)
     tx.state.attempts.push(attempt)
+    tx.attemptsByRepo?.set(attempt.repo, attempt)
     this.queueJob(tx, attempt)
     this.attemptActivity(tx.state, attempt, "dispatched", `Dispatched "${oneLine(brief.task, 80)}" to ${agentLabel(this.options.agents, agent)}.`)
     return { attempt, credentials }
@@ -880,6 +883,9 @@ export class ProjectService implements ProjectHandle {
       brief: briefFile(brief),
       checks: parseChecks(brief.acceptance),
     })
+    if (!opts.force && result.headSha === attempt.headSha && attempt.digest?.headSha === result.headSha &&
+      attempt.merge?.headSha === result.headSha && attempt.merge.mainSha === result.mainSha &&
+      tx.state.project.mainSha === result.mainSha) return
     const now = this.now()
     const mainMoved = result.mainSha !== tx.state.project.mainSha
     if (mainMoved) {
@@ -908,7 +914,7 @@ export class ProjectService implements ProjectHandle {
     })
     attempt.merge = { ...result.merge, checkedAt: now }
     attempt.updatedAt = now
-    if (newHead && this.ports.reviewer) attempt.review = await this.review(brief, attempt)
+    if (newHead) attempt.review = this.ports.reviewer ? await this.review(brief, attempt) : null
     if (attempt.merge.state === "conflict") {
       if (newHead || !wasConflict || opts.force) this.conflictActivity(tx.state, attempt, brief)
     } else if (newHead || opts.force) {
@@ -973,8 +979,10 @@ export class ProjectService implements ProjectHandle {
       this.log.warn("reconcile main failed", { project: this.projectId, error: String(err) })
     }
     for (const attempt of tx.state.attempts) {
+      if (!this.live(attempt)) continue
       try {
-        await this.noteHead(tx, attempt.repo, "")
+        const head = await this.ports.artifacts.head(attempt.repo)
+        if (head) await this.noteHead(tx, attempt.repo, head)
       } catch (err) {
         this.log.warn("reconcile attempt failed", { attempt: attempt.id, error: String(err) })
       }

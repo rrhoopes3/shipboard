@@ -4,7 +4,8 @@ import os from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
 import { afterEach, describe, expect, it } from "vitest"
-import type { AttemptView, BoardView, Lane, TaskView } from "../../src/core/types.ts"
+import type { AttemptView, BoardView, Lane, ProjectState, TaskView } from "../../src/core/types.ts"
+import { boardView as coreBoardView } from "../../src/core/views.ts"
 import { runCli, shQuote } from "../../runner/cli.ts"
 import { startGitServer } from "./helpers/gitServer.ts"
 import { startMockBoard, type MockBoard } from "./helpers/mockBoard.ts"
@@ -151,6 +152,33 @@ describe("agent CLI", () => {
     expect(res.out).toContain("Touched site/index.html. Acceptance check passed.")
     expect(res.out).toContain("running on mac-1a2b")
     expect(res.out).not.toContain("REVIEW")
+  })
+
+  it("does not show a legacy review of an older head in board or status", async () => {
+    const { cli, board } = await setup()
+    const sample = boardView()
+    const task = sample.lanes.find((lane) => lane.lane === "ship")!.tasks[0]!
+    const { job: _job, agentLabel: _label, agentKind: _kind, previewUrl: _preview, primary: _primary, secondary: _secondary, ...storedAttempt } = task.current
+    const state: ProjectState = {
+      schema: 1,
+      version: sample.version,
+      project: { id: P, name: sample.project.name, description: "", createdAt: sample.project.createdAt, repo: P, mainSha: sample.project.mainSha, seed: "harbor" },
+      briefs: [task.brief],
+      attempts: [{ ...storedAttempt, review: { verdict: "off-brief", note: "Stale review of an older head", model: "reviewer", headSha: "f".repeat(40), at: "2026-10-01T10:04:00.000Z" } }],
+      jobs: [],
+      activity: [],
+      reconciledAt: 0,
+    }
+    board.boards.set(P, coreBoardView(state, []))
+
+    const listing = await cli(["board", P])
+    const detail = await cli(["status", task.current.id])
+    expect(listing.code).toBe(0)
+    expect(detail.code).toBe(0)
+    expect(listing.out).toContain("SHIP  1")
+    expect(listing.out).not.toContain("review: off-brief")
+    expect(detail.out).not.toContain("review    off-brief")
+    expect(detail.out).not.toContain("Stale review of an older head")
   })
 
   it("dispatches with every repeated --path, --constraint and --acceptance, and prints the returned attempt id", async () => {

@@ -33,11 +33,11 @@ Start the board, then in another terminal configure a runner. The runner token i
 
 ```bash
 cp shipboard.runner.example.json shipboard.runner.json
-npm run runner -- --agents grok --dry-run
-npm run runner -- --agents grok
+npm run runner -- --agents codex --dry-run
+npm run runner -- --agents codex
 ```
 
-The dry run checks executable discovery and prints the effective command without claiming a job or calling a model. Grok is found as `grok` on `PATH`, then at `~/.grok/bin/grok`; another installation can be set with `templates.grok.bin`. The runner checks whether Cursor's `agent` command actually resolves to Grok and refuses that collision. Cursor's edit mode needs `--force`, so its default template is refused until `allowBypass` is explicitly enabled in an isolated VM or container. Grok's default uses `--always-approve` inside its workspace sandbox and retains deny rules for Git control operations. Run `npm run runner -- --help` for flags and [the architecture](docs/ARCHITECTURE.md) for the job and token flow.
+The dry run checks executable discovery and prints the effective command without claiming a job or calling a model. Grok is found as `grok` on `PATH`, then at `~/.grok/bin/grok`; another installation can be set with `templates.grok.bin`. The runner checks whether Cursor's `agent` command actually resolves to Grok and refuses that collision. Grok's headless edit command needs `--always-approve`, and Cursor's needs `--force`. Both templates are refused by default; on an isolated VM or container, explicitly set `templates.grok.allowBypass` or `templates.cursor.allowBypass` to `true` to offer them. Grok's `--sandbox workspace` can fail open, so that flag does not waive the opt-in. Run `npm run runner -- --help` for flags and [the architecture](docs/ARCHITECTURE.md) for the job and token flow.
 
 Dispatch a task from the board or use the CLI:
 
@@ -45,7 +45,7 @@ Dispatch a task from the board or use the CLI:
 npm run agent -- list
 npm run agent -- board <projectId>
 npm run agent -- dispatch --project <projectId> --task "Set the lede" \
-  --path site/index.html --acceptance 'contains site/index.html "ready for sea"' --agent grok
+  --path site/index.html --acceptance 'contains site/index.html "ready for sea"' --agent codex
 npm run agent -- status <attemptId>
 ```
 

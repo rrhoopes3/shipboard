@@ -33,6 +33,7 @@ const expected = { repo, ref: "refs/heads/main", after, namespace: "shipboard" }
 describe("parsePushEvent", () => {
   it("reads one event with the documented source and payload fields", () => {
     expect(parsePushEvent(cloudEvent())).toEqual(expected)
+    expect(parsePushEvent(cloudEvent({}, { after: after.toUpperCase() }))).toEqual(expected)
   })
 
   it("rejects speculative wrappers, aliases, JSON strings and batches", () => {
@@ -55,12 +56,11 @@ describe("parsePushEvent", () => {
     ]) expect(parsePushEvent(input)).toBeNull()
   })
 
-  it("ignores other events, deleted refs, missing repos and junk", () => {
+  it("rejects other events, missing repos and junk", () => {
     expect(parsePushEvent(cloudEvent({ type: "cf.artifacts.repo.forked" }))).toBeNull()
     expect(parsePushEvent(cloudEvent({ type: undefined }))).toBeNull()
     expect(parsePushEvent(cloudEvent({ source: { repoName: repo } }))).toBeNull()
     expect(parsePushEvent(cloudEvent({ source: { namespace: "", repoName: repo } }))).toBeNull()
-    expect(parsePushEvent(cloudEvent({}, { after: "0".repeat(40) }))).toBeNull()
     expect(parsePushEvent(cloudEvent({}, { after: "nope" }))).toBeNull()
     expect(parsePushEvent(cloudEvent({}, { ref: "main" }))).toBeNull()
     expect(parsePushEvent(cloudEvent({ source: { type: "artifacts.repo", namespace: "shipboard" } }))).toBeNull()
@@ -122,7 +122,7 @@ describe("handlePush", () => {
     expect(calls[0]?.name).toBe("harbor-notes-3f2a")
   })
 
-  it("skips other namespaces, other refs and events it cannot read, without touching a project", async () => {
+  it("skips other namespaces, other refs and ref deletion without touching a project", async () => {
     const { ns, calls } = fakeProjects(() => ({ ok: true, value: undefined }))
     const env = { PROJECT: ns, ARTIFACTS_NAMESPACE: "shipboard" }
     expect(await handlePush(env, cloudEvent({ source: { namespace: "other", repoName: repo } }), fakeStep() as never)).toEqual({
@@ -132,7 +132,20 @@ describe("handlePush", () => {
       skipped: "refs/heads/feature is not main",
     })
     expect(await handlePush(env, cloudEvent({}, { ref: "refs/tags/v1" }), fakeStep() as never)).toEqual({ skipped: "refs/tags/v1 is not main" })
-    expect(await handlePush(env, { hello: "world" }, fakeStep() as never)).toEqual({ skipped: "not a push event" })
+    expect(await handlePush(env, cloudEvent({}, { after: "0".repeat(40) }), fakeStep() as never)).toEqual({ skipped: "deleted ref" })
+    expect(calls).toHaveLength(0)
+  })
+
+  it("fails the Workflow visibly for an unsupported envelope or malformed push", async () => {
+    const { ns, calls } = fakeProjects(() => ({ ok: true, value: undefined }))
+    const workflow = new PushWorkflow({} as ExecutionContext, { PROJECT: ns } as never)
+    for (const input of [{ body: cloudEvent() }, JSON.stringify(cloudEvent()), [cloudEvent()], cloudEvent({}, { after: "bad" })]) {
+      const step = fakeStep()
+      await expect(workflow.run(
+        { payload: input, timestamp: new Date(), instanceId: "bad-input", workflowName: "shipboard-push" }, step as never,
+      )).rejects.toThrow("Unsupported Artifacts push event")
+      expect(step.steps).toHaveLength(0)
+    }
     expect(calls).toHaveLength(0)
   })
 

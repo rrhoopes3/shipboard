@@ -68,10 +68,10 @@ describe("template rendering", () => {
 })
 
 describe("default templates", () => {
-  it("use no bypass flags on the host, except Cursor whose only edit mode is --force", () => {
+  it("flags Grok and Cursor's working headless edit modes for explicit isolation opt-in", () => {
     expect(bypassFlagsIn(DEFAULT_TEMPLATES.claude)).toEqual([])
     expect(bypassFlagsIn(DEFAULT_TEMPLATES.codex)).toEqual([])
-    expect(bypassFlagsIn(DEFAULT_TEMPLATES.grok)).toEqual([])
+    expect(bypassFlagsIn(DEFAULT_TEMPLATES.grok)).toEqual(["--always-approve"])
     expect(bypassFlagsIn(DEFAULT_TEMPLATES.cursor)).toEqual(["--force"])
   })
 
@@ -79,9 +79,11 @@ describe("default templates", () => {
     const t = (kind: AgentTemplate["kind"], args: string[]) => bypassFlagsIn({ kind, args })
     expect(t("grok", ["--always-approve"])).toEqual(["--always-approve"])
     expect(t("grok", ["--yolo"])).toEqual(["--yolo"])
-    // Inside Grok's own workspace or strict sandbox, always-approve is not a bypass.
-    expect(t("grok", ["--always-approve", "--sandbox", "workspace"])).toEqual([])
-    expect(t("grok", ["--yolo", "--sandbox=strict"])).toEqual([])
+    // Sandbox flags cannot make unattended approval safe, in either order or with an override.
+    expect(t("grok", ["--always-approve", "--sandbox", "workspace"])).toEqual(["--always-approve"])
+    expect(t("grok", ["--sandbox=strict", "--yolo"])).toEqual(["--yolo"])
+    expect(t("grok", ["--always-approve", "--sandbox", "workspace", "--sandbox=off"])).toEqual(["--always-approve"])
+    expect(t("grok", ["--sandbox=off", "--sandbox", "workspace", "--always-approve"])).toEqual(["--always-approve"])
     expect(t("grok", ["--always-approve", "--sandbox", "off"])).toEqual(["--always-approve"])
     expect(t("grok", ["--permission-mode", "bypassPermissions"])).toEqual(["--permission-mode bypassPermissions"])
     expect(t("claude", ["--permission-mode=bypassPermissions"])).toEqual(["--permission-mode bypassPermissions"])
@@ -92,7 +94,7 @@ describe("default templates", () => {
     expect(t("script", ["--yolo"])).toEqual([])
   })
 
-  it("Grok: always-approve inside the workspace sandbox, no --trust, and deny rules for git and .git/.shipboard", () => {
+  it("Grok: gated auto-approval, no --trust, and deny rules for git and .git/.shipboard", () => {
     const args = DEFAULT_TEMPLATES.grok.args
     expect(DEFAULT_TEMPLATES.grok.bin).toBe("grok")
     expect(args).toContain("--always-approve")
@@ -103,6 +105,7 @@ describe("default templates", () => {
     const denies = args.filter((_a, i) => args[i - 1] === "--deny")
     expect(denies).toEqual(expect.arrayContaining(["Bash(git commit*)", "Bash(git push*)", "Edit(**/.git/**)", "Write(**/.git/**)", "Edit(**/.shipboard/**)"]))
     expect(DEFAULT_TEMPLATES.grok.parser).toBe("grok-json")
+    expect(DEFAULT_TEMPLATES.grok.allowBypass).toBe(false)
   })
 
   it("Claude: acceptEdits, no project settings or MCP, no Glob/Grep in the allow list", () => {
@@ -156,6 +159,19 @@ describe("agentEnv", () => {
 })
 
 describe("resolveAgents", () => {
+  it("refuses Grok auto-approval by default even with workspace sandbox, then offers it with an explicit opt-in", async () => {
+    const dir = await tempDir()
+    await executable(path.join(dir, "bin", "grok"))
+    const opts = { pathVar: path.join(dir, "bin"), cwd: dir, homeDir: dir }
+    const refused = await resolveAgents(["grok"], { grok: DEFAULT_TEMPLATES.grok }, opts)
+    expect(refused.ready).toEqual([])
+    expect(refused.refused[0]?.reason).toMatch(/--always-approve.*allowBypass/)
+
+    const allowed = await resolveAgents(["grok"], { grok: { ...DEFAULT_TEMPLATES.grok, allowBypass: true } }, opts)
+    expect(allowed.refused).toEqual([])
+    expect(allowed.ready[0]?.warnings.join(" ")).toContain("running with --always-approve")
+  })
+
   it("finds Grok on PATH, then in the current home directory", async () => {
     const dir = await tempDir()
     const homeDir = path.join(dir, "home")
@@ -164,8 +180,9 @@ describe("resolveAgents", () => {
     await executable(pathBin)
     await executable(homeBin)
     const opts = { pathVar: path.dirname(pathBin), cwd: dir, homeDir }
-    expect((await resolveAgents(["grok"], { grok: DEFAULT_TEMPLATES.grok }, opts)).ready[0]?.binPath).toBe(pathBin)
-    expect((await resolveAgents(["grok"], { grok: DEFAULT_TEMPLATES.grok }, { ...opts, pathVar: "" })).ready[0]?.binPath).toBe(homeBin)
+    const grok = { ...DEFAULT_TEMPLATES.grok, allowBypass: true }
+    expect((await resolveAgents(["grok"], { grok }, opts)).ready[0]?.binPath).toBe(pathBin)
+    expect((await resolveAgents(["grok"], { grok }, { ...opts, pathVar: "" })).ready[0]?.binPath).toBe(homeBin)
   })
 
   it("refuses an agent whose binary is missing, with a clear message", async () => {

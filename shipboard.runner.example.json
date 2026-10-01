@@ -3,7 +3,7 @@
 
   "url": "http://127.0.0.1:8787",
   "runnerId": "my-mac",
-  "agents": ["grok"],
+  "agents": ["codex"],
   "concurrency": 1,
 
   "jobTimeoutSec": 1200,
@@ -25,7 +25,7 @@
     "$comment": "Keyed by agent id (the ids the board dispatches to). An entry replaces only the fields it names; the rest comes from the built-in template for its kind (claude, codex, grok, cursor) or, for kind script, from {args: [\"{prompt_file}\", \"{cwd}\"], parser: \"plain\"}. Placeholders, replaced inside each argv element: {prompt} {prompt_file} {cwd} {job_dir} {session_uuid} {max_turns} {budget_usd}. args are an argv array run without a shell. envPass names host env vars handed to that agent when set; nothing else from the host env reaches it except PATH, HOME and LANG. Templates that use a CLI's bypass/yolo flag are refused unless allowBypass is true.",
 
     "grok": {
-      "$comment": "These are the built-in grok args, spelled out. Grok 1.0.44 cancels headless runs under acceptEdits, so it uses --always-approve, which the runner only accepts together with Grok's Seatbelt workspace (or strict) sandbox; the --deny rules still win. Never --trust, so the clone's own .claude/.grok config stays untrusted.",
+      "$comment": "These are the built-in Grok args, spelled out. Grok 1.0.44 cancelled headless edits under acceptEdits, so the working template uses --always-approve. The runner refuses this template unless allowBypass is explicitly set to true on an isolated VM/container. --sandbox workspace is best-effort and does not waive that requirement; --deny rules still apply. Never --trust, so the clone's own .claude/.grok config stays untrusted.",
       "bin": "grok",
       "args": [
         "--prompt-file", "{prompt_file}", "--cwd", "{cwd}", "--output-format", "json",
@@ -41,6 +41,7 @@
       "envPass": ["XAI_API_KEY", "GROK_HOME"],
       "envSet": { "RUST_LOG": "error" },
       "parser": "grok-json",
+      "allowBypass": false,
       "timeoutSec": 1200,
       "versionArgs": ["--version"]
     },

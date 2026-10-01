@@ -121,6 +121,14 @@ function state(attempts: Attempt[]): ProjectState {
 }
 
 describe("state helpers", () => {
+  it("does not expose a persisted review written for an older head", () => {
+    const stale = { verdict: "off-brief" as const, note: "Old work", model: "m", headSha: sha("d"), at: "" }
+    const stored = attempt({ review: stale })
+    const current = boardView(state([stored]), defaultAgents()).lanes.flatMap((lane) => lane.tasks)[0]?.current
+    expect(current?.review).toBeNull()
+    expect(stored.review).toEqual(stale)
+  })
+
   it("caps activity at 200, newest last", () => {
     const s = state([])
     for (let i = 0; i < ACTIVITY_CAP + 25; i++) pushActivity(s, { kind: "pushed", text: `n${i}` }, `t${i}`)

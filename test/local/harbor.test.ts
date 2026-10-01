@@ -1,12 +1,40 @@
-import { afterEach, describe, expect, it } from "vitest"
+import path from "node:path"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { defaultAgents } from "../../src/core/agents.ts"
+import { ProjectService } from "../../src/core/service.ts"
 import type { BoardView } from "../../src/core/types.ts"
-import { allTasks, api, boot, cleanup, taskByTitle } from "./helpers.ts"
+import { JsonStateStore } from "../../src/local/state.ts"
+import { allTasks, api, boot, cleanup, quiet, taskByTitle, tempDir } from "./helpers.ts"
 
-afterEach(cleanup)
+afterEach(async () => {
+  vi.restoreAllMocks()
+  await cleanup()
+})
 
 const decode = (bytes: Uint8Array | null) => (bytes ? new TextDecoder().decode(bytes) : "")
 
 describe("harbor demo", () => {
+  it("assesses scripted commits even when artifact head metadata still reports the brief", async () => {
+    const server = await boot()
+    const dir = await tempDir()
+    const id = "harbor-lag-0001"
+    const service = new ProjectService(id, {
+      artifacts: server.host.artifacts,
+      state: new JsonStateStore(path.join(dir, `${id}.json`)),
+      log: quiet,
+    }, { agents: defaultAgents(), schedule: () => {} })
+    await service.init({ id, name: "Harbor lag", seed: "harbor" })
+    const before = await service.board({ reconcile: false })
+    const briefs = new Map(allTasks(before).map((task) => [task.current.repo, task.current.briefSha]))
+    const actualHead = server.host.artifacts.head.bind(server.host.artifacts)
+    const head = vi.spyOn(server.host.artifacts, "head").mockImplementation((repo, branch) =>
+      briefs.has(repo) ? Promise.resolve(briefs.get(repo)!) : actualHead(repo, branch))
+    expect(await service.runDemoJobs()).toBe(3)
+    const after = await service.board({ reconcile: false })
+    expect(allTasks(after).every((task) => task.current.status === "ready" && task.current.digest?.headSha === task.current.headSha)).toBe(true)
+    expect(head.mock.calls.some(([repo]) => briefs.has(repo))).toBe(false)
+  })
+
   it("ships two, re-runs the conflict on the new main with the same brief bytes, then ships it", async () => {
     const server = await boot()
     const a = api(server.url)

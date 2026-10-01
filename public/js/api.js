@@ -180,7 +180,9 @@ export const api = {
     return configPromise
   },
   async ensurePreviewSession(projectId) {
-    if (fixture || (await this.config()).publicRead) return false
+    if (fixture) return true
+    const config = await this.config()
+    if (config.publicRead || (config.mode === "local" && !config.boardAuth)) return true
     await revoking
     if (previewExpires.get(projectId) > Date.now() + 60_000) return true
     if (previewPending.has(projectId)) return previewPending.get(projectId)

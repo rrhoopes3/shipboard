@@ -9,7 +9,6 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import type { ProjectHandle } from "../../src/core/ports.ts"
-import { LANES, placement } from "../../src/core/state.ts"
 import type {
   Action,
   Activity,
@@ -33,6 +32,16 @@ import { arr, bool, iso, lit, nullable, num, obj, optional, sha40, str, validate
 
 // ------------------------------------------------------------------ the contract, as schemas
 
+// Expected product contract, independent of the production policy used to build fixtures.
+const LANES = ["rerun", "ship", "review", "working", "parked", "shipped"] as const satisfies readonly Lane[]
+const PLACEMENT: Record<Lane, { primary: Action; secondary: Action[]; statuses: AttemptView["status"][] }> = {
+  rerun: { primary: "rerun", secondary: ["park"], statuses: ["ready", "failed"] },
+  ship: { primary: "ship", secondary: ["park", "rerun"], statuses: ["ready"] },
+  review: { primary: "ship-anyway", secondary: ["park", "rerun"], statuses: ["ready"] },
+  working: { primary: "wait", secondary: ["park"], statuses: ["waiting", "ready"] },
+  parked: { primary: "unpark", secondary: ["rerun"], statuses: ["parked"] },
+  shipped: { primary: "none", secondary: [], statuses: ["shipped"] },
+}
 const action = lit<Action>("ship", "ship-anyway", "rerun", "park", "unpark", "wait", "none")
 
 const agentInfo = obj<AgentInfo>({ id: str, label: str, kind: lit("cli", "demo", "manual"), lastSeenAt: optional(iso) })
@@ -201,10 +210,10 @@ describe("UI fixtures", () => {
     it("gives every card the one button the lane table says", () => {
       for (const { lane, tasks } of board.lanes) {
         for (const t of tasks) {
-          const rule = placement(t.current)
-          expect(rule.lane).toBe(lane)
+          const rule = PLACEMENT[lane]
           expect(t.current.primary, t.brief.task).toBe(rule.primary)
           expect(t.current.secondary, t.brief.task).toEqual(rule.secondary)
+          expect(rule.statuses, t.brief.task).toContain(t.current.status)
           if (lane === "rerun" && t.current.status === "ready") expect(t.current.merge?.state).toBe("conflict")
           if (lane === "ship") expect(t.current.digest?.satisfies).not.toBe("no")
         }
