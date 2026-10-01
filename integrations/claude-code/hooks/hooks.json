@@ -1,0 +1,4 @@
+{
+  "description": "shipboard: /shipboard command, mcp__shipboard__push tool, a tool.call push tripwire on Bash and file edits, the brief as prompt.submit context, and a Pane with the fork's verdict.",
+  "modules": ["./register.ts"]
+}

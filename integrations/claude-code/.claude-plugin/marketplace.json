@@ -1,0 +1,14 @@
+{
+  "name": "shipboard-local",
+  "description": "The shipboard mod for Claude Code, straight from this repository.",
+  "owner": {
+    "name": "rrhoopes3"
+  },
+  "plugins": [
+    {
+      "name": "shipboard",
+      "source": ".",
+      "description": "Claim shipboard briefs from an interactive Claude Code session, push through a per-fork token, and see the board's verdict in a pane."
+    }
+  ]
+}
