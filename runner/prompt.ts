@@ -18,7 +18,7 @@ export function buildPrompt(job: ClaimedJob): string {
     `- Touch only these paths: ${paths}`,
     "- Do not run git commit or git push. Do not edit anything under .git or .shipboard. The runner commits and pushes your work when you finish.",
     "- Do not ask questions; nobody is watching this run. If something is unclear, make the smallest reasonable choice and say so.",
-    "- End your reply with a one-paragraph summary of what you changed.",
+    "- End your reply with a concise one-paragraph summary of what you changed, with normal spacing between sentences.",
     "",
   ]
 

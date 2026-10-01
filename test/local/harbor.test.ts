@@ -33,9 +33,11 @@ describe("harbor demo", () => {
     const rename = taskByTitle(board, "Rename").current
     const tint = taskByTitle(board, "Tint").current
 
-    let res = await a.post(`/api/attempts/${footer.id}/ship`, { expectedHead: footer.headSha })
+    // The rename creates the conflict; the later footer touches the same file but does not
+    // cause it. Neither the latest ship nor overlapping paths establish conflict provenance.
+    let res = await a.post(`/api/attempts/${rename.id}/ship`, { expectedHead: rename.headSha })
     expect(res.status).toBe(200)
-    res = await a.post(`/api/attempts/${rename.id}/ship`, { expectedHead: rename.headSha })
+    res = await a.post(`/api/attempts/${footer.id}/ship`, { expectedHead: footer.headSha })
     expect(res.status).toBe(200)
     board = (await a.json<{ board: BoardView }>(res)).board
 
@@ -70,7 +72,7 @@ describe("harbor demo", () => {
     expect(old?.id).toBe(tint.id)
     expect(old?.status).toBe("discarded")
     expect(old?.replacedBy).toBe(attemptId)
-    expect(old?.discardReason).toBe('Conflicted with main in site/index.html after "Rename the pier mark to the night board" shipped.')
+    expect(old?.discardReason).toBe("Conflicted with main in site/index.html.")
 
     const briefFile = `.shipboard/briefs/${rerun.brief.id}.json`
     const oldBytes = await artifacts.readFile(tint.repo, tint.briefSha, briefFile)

@@ -28,7 +28,7 @@ describe("buildPrompt", () => {
     expect(text).toContain("Implement the brief below in this git checkout")
     expect(text).toContain("- Touch only these paths: site/index.html, site/styles/")
     expect(text).toContain("Do not run git commit or git push. Do not edit anything under .git or .shipboard.")
-    expect(text).toContain("End your reply with a one-paragraph summary of what you changed.")
+    expect(text).toContain("End your reply with a concise one-paragraph summary of what you changed, with normal spacing between sentences.")
     expect(text).toContain("Task:\nTint the pier name\n")
     expect(text).toContain("Constraints:\n- Keep the page static\n")
     expect(text).toContain('contains site/index.html "teal"\nLooks calm on a phone.')

@@ -47,7 +47,7 @@ variables are the fallback, which suits `--plugin-dir`.
 |---|---|---|
 | `url` | `SHIPBOARD_URL` | The board. Default `http://127.0.0.1:8787`. |
 | `runner_token` | `SHIPBOARD_RUNNER_TOKEN` | The board's `RUNNER_TOKEN`: claim jobs, mint per-fork git tokens. |
-| `board_token` | `SHIPBOARD_TOKEN` | The board's `BOARD_TOKEN`. Only `/shipboard dispatch` uses it. |
+| `board_token` | `SHIPBOARD_TOKEN` | The board's `BOARD_TOKEN`. Used for dispatch and reading a private board's verdict. |
 | `project` | `SHIPBOARD_PROJECT` | Default project for `/shipboard dispatch`. |
 | `autoclaim` | `SHIPBOARD_AUTOCLAIM=1` | Claim the next `claude-code` job when an interactive session starts. |
 
@@ -80,7 +80,8 @@ review, preview URL and the board's next action. Claude can push again after a f
 ## What it does
 
 1. **Joins the board.** The runner protocol from `docs/ARCHITECTURE.md`: `claim` with
-   `agents: ["claude-code"]` and runner id `claude-code-mod/<hostname>/<session id>`, a heartbeat
+   `agents: ["claude-code"]` and a runner id `claude-code-mod:<host>:<session>:<fingerprint>` (bounded to
+   the server's 80-character ID limit), a heartbeat
    every 60 s while the job is active, read and write credentials per job, `pushed`, `finish`.
 2. **Checks the brief.** The fork's first commit after base must change only
    `.shipboard/briefs/<briefId>.json`, and hold exactly the canonical bytes of the brief that came
@@ -93,6 +94,8 @@ review, preview URL and the board's next action. Claude can push again after a f
    a job is active: brief check, fork and head, clean or conflicting paths, digest and checks,
    review, preview URL, and the board's one action (Ship, Ship anyway, Re-run, working). The same
    summary sits on the status line under the prompt for terminals too narrow for a pane.
+   If the board has private reads, set `board_token` as well as `runner_token` so the pane can
+   show its verdict. A public board needs no board token for reads.
 
 ## Security
 

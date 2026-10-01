@@ -2,104 +2,70 @@
 
 **Agents fork. Humans ship. Nobody merges.**
 
-An entry for Cloudflare's [next Git platform](https://blog.cloudflare.com/next-git-platform-on-cloudflare/)
-contest, built on [Artifacts](https://developers.cloudflare.com/artifacts/) (one repo per agent task),
-Workers, Queues event subscriptions, Sandbox SDK and a Durable Object per project.
+Shipboard keeps each coding task in its own Git fork. A task starts with a committed brief; an agent works on that fork; Shipboard checks the resulting diff and whether it merges with current `main`. If it conflicts, the board offers a re-run of the same brief on a fresh fork of current `main`. A person decides which attempts to ship, park, or re-run.
 
-## The idea
+## What works today
 
-**When an agent's fork stops merging, shipboard's default action discards the diff and
-re-executes the brief that was committed as the fork's first commit, against the new main.
-The human gets a Ship button, not a merge editor.**
+The local board runs with Node and ordinary Git. It can create or import projects, dispatch briefs, run the scripted harbor demo, accept agent pushes, produce a digest and acceptance-check result, trial-merge attempts, show diffs and previews, ship, park, and re-run. The runner claims queued jobs and launches locally installed Claude Code, Codex, Grok, Cursor, or a configured script. Each job gets an isolated clone; the runner verifies the committed brief, inspects agent changes, commits allowed work, and pushes with a token scoped to that fork.
 
-That is the whole bet. Tools that repair a conflicted branch keep the old tip and patch it
-forward: rebase it, resolve it, or have an agent fix the conflict in place. shipboard throws
-the old tip away. The brief is the durable thing; the diff is disposable output that can be
-regenerated. Agents are cheap. Three-way merges of agent output are not.
+The Cloudflare host is implemented in this tree: a Worker serves the same Hono API and static board, Artifacts stores Git repos, Durable Objects hold project and registry state, an Artifacts push event starts a Workflow, and an optional Workers AI reviewer adds a verdict. Trial merges use `isomorphic-git` in memory inside the project Durable Object. The Cloudflare build can be checked offline with `npm run cf:check`; a live Cloudflare deployment and end-to-end verification have not been completed here. Deployment requires a Workers Paid account with Artifacts access. See [deployment instructions](docs/DEPLOY.md).
 
-### What is not new
+An optional [Claude Code mod](integrations/claude-code/README.md) connects an interactive Claude session to queued `claude-code` jobs. Its hooks and mock-board tests run locally; a live Claude Code session check is still pending because the CLI was unavailable on the development machine.
 
-A board of parallel agent tasks, one isolated copy of the repo per agent, and trial-merging a
-change before it lands all exist elsewhere. shipboard uses them as plumbing and does not claim
-them.
+## Try the local board
 
-### How it works
-
-1. **The brief is the fork's first commit.** An agent task starts as an Artifacts fork of the
-   project. Its first commit is a structured brief: task, constraints, acceptance check, the
-   paths it expects to touch. The agent gets a repo-scoped write token for *that fork only*.
-2. **Push → digest.** A Queue consumer wakes on every `repo.pushed` event, reads the brief and
-   the diff, asks "does this diff satisfy the brief", trial-merges the fork against the current
-   main in a Sandbox (real `git`), and records clean/conflict plus the preview URL from Workers
-   Builds. All of that lands in the project's Durable Object.
-3. **Conflict → re-run.** A fork that no longer merges cleanly is not handed to a human to
-   resolve. Its diff is dropped, a fresh fork is cut from the new main, and the agent runs the
-   same brief again. The re-run goes through step 2 like any other push.
-4. **Ship.** One page per project lists each open fork with its brief, digest, preview and merge
-   state, and one button. The human decides what ships; nobody merges by hand.
-
-This is a productized version of a protocol one person has been running by hand for a year
-across Claude Code, Codex, Grok and Cursor on one VPS: a `queue/` of task briefs, a
-`handoff/` directory of what each agent did and left open, and a freeze board. The demo opens
-there.
-
-## Status
-
-2026-10-01: the local board runs. Forks, briefs, digests, real `git merge-tree` trial-merges,
-ship / park / re-run, and a thin agent client are in this tree. Cloudflare Artifacts, Queues,
-and the Sandbox SDK are not wired — that needs a Workers Paid account on the Artifacts beta.
-Until then, git on this machine stands in for Artifacts and the sandbox.
-
-Read [`docs/PLAN.md`](docs/PLAN.md) for the contest rules, the verified API surface, and the
-schedule. The go/no-go gate there is a working trial-merge; `npm test` covers that locally.
-
-> `docs/PLAN.md` was written as an internal brief and mentions paths on the author's own
-> machine. Scrub it before this repo goes public for submission.
-
-## Layout
-
-```
-worker/      Hono app: board API, project state, local git repos
-sandbox/     trial-merge via git merge-tree (Sandbox SDK stand-in)
-agent/       thin client: open a fork, push files
-public/      ship board
-docs/        plan
-```
-
-## Running it
-
-Requires Node 22+ and `git` on `PATH`. No Cloudflare account is required for the local board.
+Requires Node 22+, npm, and Git on `PATH`. The local board needs no Cloudflare account.
 
 ```bash
-npm install
+npm ci
+npm run typecheck
 npm test
 npm start
 ```
 
-Open http://127.0.0.1:8787
+Open [http://127.0.0.1:8787](http://127.0.0.1:8787). Create a starter project or use the harbor demo. In the demo, three scripted attempts change a small notice. Ship one of the two attempts that edit its heading; the other then conflicts and can be re-run against the new main. The footer attempt can ship independently. This demonstrates the re-run loop without a model account.
 
-The pier demo on the home page forks a small notice three ways and pushes. All three merge
-into the original main. Ship two of them. The third conflicts. Re-run it. The re-run starts
-from current main with the original brief. There is no merge editor.
+`PORT` changes the local port (default `8787`), and `SHIPBOARD_DATA` changes the local repo and state directory (default `.data/`). Without `BOARD_TOKEN`, the server binds to loopback and checks the Host and Origin of requests. Set `BOARD_TOKEN` to require authorization for mutations, `RUNNER_TOKEN` for runner routes, and `PUBLIC_READ=false` to require the board token for reads. The UI stores the board token in browser localStorage and sends it as a Bearer header. Agent-authored previews are served with a restrictive content security policy.
 
-`PORT` changes the listen port (default 8787). `SHIPBOARD_DATA` changes where repos and the
-board store live (default `.data/`).
+## Run a coding agent
 
-Agent client, with the server already running. It can open a fork and push. Shipping stays
-on the board.
+Start the board, then in another terminal configure a runner. The runner token is read from the environment; it is never stored in the config file. For a local tokenless board, the runner can start without one. Copy [the example config](shipboard.runner.example.json) if you want to change templates, limits, or the set of agents.
+
+```bash
+cp shipboard.runner.example.json shipboard.runner.json
+npm run runner -- --agents grok --dry-run
+npm run runner -- --agents grok
+```
+
+The dry run checks executable discovery and prints the effective command without claiming a job or calling a model. Grok is found as `grok` on `PATH`, then at `~/.grok/bin/grok`; another installation can be set with `templates.grok.bin`. The runner checks whether Cursor's `agent` command actually resolves to Grok and refuses that collision. Cursor's edit mode needs `--force`, so its default template is refused until `allowBypass` is explicitly enabled in an isolated VM or container. Grok's default uses `--always-approve` inside its workspace sandbox and retains deny rules for Git control operations. Run `npm run runner -- --help` for flags and [the architecture](docs/ARCHITECTURE.md) for the job and token flow.
+
+Dispatch a task from the board or use the CLI:
 
 ```bash
 npm run agent -- list
-npm run agent -- fork --project <id> --task "Set the lede" --path site/index.html --acceptance "contains site/index.html \"ready for sea\"" --agent cursor
-npm run agent -- push --fork <id> --file site/index.html
-npm run agent -- status --project <id>
+npm run agent -- board <projectId>
+npm run agent -- dispatch --project <projectId> --task "Set the lede" \
+  --path site/index.html --acceptance 'contains site/index.html "ready for sea"' --agent grok
+npm run agent -- status <attemptId>
 ```
 
-Acceptance checks are one per line: `contains <path> "<text>"`. Any other acceptance text is
-left for a person to read.
+`--path`, `--constraint`, and `--acceptance` can be repeated. Acceptance checks of the form `contains <path> "<text>"` are evaluated against the pushed tree; other acceptance text remains for human review. To work with a CLI outside the runner, dispatch to the `manual` agent with `--credentials` for a fork-scoped Git token and a clone/push recipe. Run `npm run agent -- --help` for the complete CLI.
 
-A Workers deploy against live Artifacts is not wired up yet.
+## Layout
+
+| Path | Purpose |
+|---|---|
+| `src/core/` | Shared project lifecycle, digests, Git trial merges, ship and re-run |
+| `src/http/` | Hono API used by both hosts |
+| `src/local/` | Node host, local bare Git repos, smart HTTP, state files |
+| `src/cloudflare/` | Worker, Artifacts adapter, Durable Objects, push Workflow, optional AI reviewer |
+| `runner/` | Job runner and manual agent CLI |
+| `integrations/claude-code/` | Optional mod for interactive Claude Code sessions |
+| `public/` | Static board UI and demo fixtures |
+| `test/` | Vitest suites, including real Git flows against the local host |
+
+The detailed behavior and API are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). [docs/PLAN.md](docs/PLAN.md) records the public project plan; [docs/DEPLOY.md](docs/DEPLOY.md) covers a future Cloudflare deployment.
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

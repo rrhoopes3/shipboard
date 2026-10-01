@@ -10,30 +10,10 @@ import { createServer } from "node:http"
 import { readFile, stat } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { BOARD_CSP, PREVIEW_CSP } from "../../src/http/api.ts"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public")
 const port = Number(process.argv[2] ?? process.env.PORT ?? 5179)
-
-const BOARD_CSP = [
-  "default-src 'self'",
-  "style-src 'self' https://fonts.googleapis.com",
-  "font-src https://fonts.gstatic.com",
-  "img-src 'self' data:",
-  "frame-src 'self'",
-  "base-uri 'none'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-].join("; ")
-
-const PREVIEW_CSP = [
-  "default-src 'none'",
-  "style-src 'unsafe-inline'",
-  "img-src data: blob: 'self'",
-  "base-uri 'none'",
-  "form-action 'none'",
-  "frame-ancestors 'self'",
-  "sandbox",
-].join("; ")
 
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",

@@ -128,7 +128,8 @@ From `ready` (usually conflicting), `failed`, or `parked`. Reads the brief from 
 brief commit (`artifacts.readFile(oldRepo, briefSha, briefPath)`), verifies it equals the stored
 brief, then makes attempt `number + 1` from **current** main exactly like a dispatch, with the same
 brief id and bytes. The old attempt becomes `discarded` with `replacedBy` and a one-sentence
-`discardReason` (e.g. `Conflicted with main in site/index.html after "Rename the pier mark" shipped.`).
+`discardReason` (e.g. `Conflicted with main in site/index.html.`). A conflict reports its paths,
+not a guessed cause: timestamps and overlapping files cannot establish which ship produced it.
 Its diff is never merged. The new job goes to the same agent unless one is given. Activity: `rerun`.
 If any step fails, nothing is discarded (the old attempt stays as it was; a half-made fork repo is
 deleted best-effort).
@@ -179,6 +180,8 @@ Mutations require `Content-Type: application/json` (415 otherwise).
 | POST | `/api/projects` | board | `CreateProjectInput` → 201 `{ project: ProjectSummary, notice }` |
 | POST | `/api/demo` | board | — → 201 `{ projectId, notice }` (creates a `harbor` project) |
 | GET | `/api/projects/:id` | read | `?since=<version>` → `BoardView`, or 304 when `version == since` |
+| POST | `/api/projects/:id/preview-session` | board | Sets a 5-minute preview cookie scoped to `/preview/:id/`; returns `{ expiresAt }` |
+| DELETE | `/api/projects/:id/preview-session` | none | Clears that preview cookie (204) |
 | POST | `/api/projects/:id/tasks` | board | `DispatchInput & { credentials?: boolean }` → 201 `{ board, attemptId, credentials?, notice }` |
 | POST | `/api/attempts/:id/ship` | board | `{ expectedHead?: string }` → `{ board, notice }` |
 | POST | `/api/attempts/:id/park` | board | → `{ board, notice }` |
@@ -190,7 +193,7 @@ Mutations require `Content-Type: application/json` (415 otherwise).
 | POST | `/api/runner/jobs/:attemptId/heartbeat` | runner | `{ runnerId }` → `{ leaseExpiresAt }` |
 | POST | `/api/runner/jobs/:attemptId/credentials` | runner | `{ runnerId, scope }` → `GitCredentials` |
 | POST | `/api/runner/jobs/:attemptId/finish` | runner | `{ runnerId, outcome: JobOutcome }` → `{ ok: true }` |
-| GET | `/preview/:projectId/:ref/*` | read | File at `main` or at an attempt's head. `ref` = `main` or an attempt id. Empty path → `index.html`; a directory → its `index.html`. |
+| GET | `/preview/:projectId/:ref/*` | read or preview session | File at `main` or at an attempt's head. `ref` = `main` or an attempt id. Empty path → `index.html`; a directory → its `index.html`. |
 | * | `/git/:namespace/:repo.git/*` | repo token | **Local host only.** Smart HTTP via `git http-backend`. |
 
 ### Auth
@@ -199,15 +202,25 @@ Mutations require `Content-Type: application/json` (415 otherwise).
 - Cloudflare: both secrets are required; with no `BOARD_TOKEN` set, every board mutation returns 503
   with a sentence saying which secret to set. `read` is open when `PUBLIC_READ` is not `"false"`,
   otherwise it needs the board token.
+- On a private board, the UI sends its board Bearer token to the preview-session route before
+  loading an iframe. The response sets a five-minute signed, HttpOnly cookie scoped to that
+  project's `/preview/` path, with `SameSite=Lax` and `Secure` on HTTPS. It contains no board token
+  and only authorizes preview files; it cannot authorize API reads or mutations. Locking the UI
+  requests cookie deletion; failed deletions are retained for retry when connectivity returns,
+  and every session expires after five minutes. Rotating the board token invalidates existing
+  signatures. This lets iframe navigation and relative assets load without putting the board
+  token in preview URLs.
 - Local: tokens are optional. When unset, the server binds 127.0.0.1 only, and every request must
   carry a `Host` of `127.0.0.1:<port>` or `localhost:<port>`, and mutations an `Origin` (if present)
   of the same. This closes CSRF and DNS rebinding.
-- The UI keeps the board token in `localStorage` and sends it as a Bearer header (never a cookie, so
-  no CSRF surface).
+- The UI keeps the board token in `localStorage` and sends it as a Bearer header for API calls.
 
 ### Security headers
 Board pages: `Content-Security-Policy: default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`.
-Previews: `default-src 'none'; style-src 'unsafe-inline'; img-src data: blob: 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; sandbox` (no scripts ever run from agent output).
+Previews: `default-src 'none'; script-src 'none'; style-src 'self' 'unsafe-inline'; img-src data: blob: 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; sandbox allow-same-origin`.
+Both the response policy and the UI iframe keep scripts disabled. Same-origin access lets static
+relative assets use the scoped preview cookie; it must never be combined with `allow-scripts`.
+Preview responses retain `Cross-Origin-Resource-Policy: same-origin`.
 All responses: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`.
 
 ## Hosts

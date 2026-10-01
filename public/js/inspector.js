@@ -257,7 +257,7 @@ export function createInspector({ lookup, getBoard, run, previewSrc }) {
           h(
             "div",
             { class: "preview-box" },
-            h("iframe", { src, sandbox: "", referrerpolicy: "no-referrer", title: `Preview of attempt ${a.number} at ${short(a.headSha)}` }),
+            h("iframe", { src, sandbox: "allow-same-origin", referrerpolicy: "no-referrer", title: `Preview of attempt ${a.number} at ${short(a.headSha)}` }),
           ),
         ),
         h("p", { class: "preview-caption" }, `Head ${short(a.headSha)} of ${a.repo}.`),
@@ -413,4 +413,3 @@ export function createInspector({ lookup, getBoard, run, previewSrc }) {
     },
   }
 }
-

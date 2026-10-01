@@ -101,7 +101,7 @@ describe("loadConfig", () => {
   it("accepts the shipped example config", async () => {
     const text = fs.readFileSync(path.join(repoRoot, "shipboard.runner.example.json"), "utf8")
     const config = await load(["--config", "/work/shipboard.runner.example.json"], { "/work/shipboard.runner.example.json": text })
-    expect(config.templates.grok?.bin).toBe("/Users/grokbot5000/.grok/bin/grok")
+    expect(config.templates.grok?.bin).toBe("grok")
     expect(config.templates.grok?.args).toEqual((await load([])).templates.grok?.args)
     expect(config.templates.script).toMatchObject({ kind: "script", bin: "/work/runner/note-agent.mjs" })
     expect(config.templates.cursor?.bin).toBe(path.join(os.homedir(), ".local/bin/agent"))

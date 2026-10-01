@@ -117,7 +117,7 @@ describe("the Worker on fake Cloudflare bindings", () => {
     expect(again.current.number).toBe(2)
     expect(again.current.baseSha).toBe(board.project.mainSha)
     expect(again.history[0]?.status).toBe("discarded")
-    expect(again.history[0]?.discardReason).toBe('Conflicted with main in site/index.html after "Rename the pier mark to the night board" shipped.')
+    expect(again.history[0]?.discardReason).toBe("Conflicted with main in site/index.html.")
     const briefFile = `.shipboard/briefs/${again.brief.id}.json`
     expect(Buffer.from((await fake.local.readFile(attemptId, again.current.briefSha, briefFile)) ?? []).toString()).toBe(
       Buffer.from((await fake.local.readFile(tint.repo, tint.briefSha, briefFile)) ?? []).toString(),

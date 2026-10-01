@@ -94,7 +94,7 @@ describe("default templates", () => {
 
   it("Grok: always-approve inside the workspace sandbox, no --trust, and deny rules for git and .git/.shipboard", () => {
     const args = DEFAULT_TEMPLATES.grok.args
-    expect(DEFAULT_TEMPLATES.grok.bin).toBe("/Users/grokbot5000/.grok/bin/grok")
+    expect(DEFAULT_TEMPLATES.grok.bin).toBe("grok")
     expect(args).toContain("--always-approve")
     expect(args).not.toContain("acceptEdits")
     expect(args.join(" ")).toContain("--sandbox workspace")
@@ -156,6 +156,18 @@ describe("agentEnv", () => {
 })
 
 describe("resolveAgents", () => {
+  it("finds Grok on PATH, then in the current home directory", async () => {
+    const dir = await tempDir()
+    const homeDir = path.join(dir, "home")
+    const pathBin = path.join(dir, "bin", "grok")
+    const homeBin = path.join(homeDir, ".grok", "bin", "grok")
+    await executable(pathBin)
+    await executable(homeBin)
+    const opts = { pathVar: path.dirname(pathBin), cwd: dir, homeDir }
+    expect((await resolveAgents(["grok"], { grok: DEFAULT_TEMPLATES.grok }, opts)).ready[0]?.binPath).toBe(pathBin)
+    expect((await resolveAgents(["grok"], { grok: DEFAULT_TEMPLATES.grok }, { ...opts, pathVar: "" })).ready[0]?.binPath).toBe(homeBin)
+  })
+
   it("refuses an agent whose binary is missing, with a clear message", async () => {
     const dir = await tempDir()
     const { ready, refused } = await resolveAgents(["claude"], { claude: DEFAULT_TEMPLATES.claude }, { pathVar: dir, cwd: dir })
@@ -180,9 +192,22 @@ describe("resolveAgents", () => {
     await fs.mkdir(path.join(dir, "bin"))
     await fs.symlink("../downloads/grok-1.0.44-macos-aarch64", path.join(dir, "bin", "agent"))
     const cursor = { ...DEFAULT_TEMPLATES.cursor, allowBypass: true }
-    const { ready, refused } = await resolveAgents(["cursor"], { cursor }, { pathVar: path.join(dir, "bin"), cwd: dir })
+    const { ready, refused } = await resolveAgents(["cursor"], { cursor }, { pathVar: path.join(dir, "bin"), cwd: dir, homeDir: dir })
     expect(ready).toEqual([])
     expect(refused[0]?.reason).toMatch(/which is Grok, not Cursor\. Set templates\.cursor\.bin to Cursor's absolute path/)
+  })
+
+  it("refuses Cursor when its agent symlink points at Grok's home-installed binary", async () => {
+    const dir = await tempDir()
+    const grok = path.join(dir, ".grok", "bin", "grok")
+    await executable(grok)
+    const cursorBin = path.join(dir, "bin", "agent")
+    await fs.mkdir(path.dirname(cursorBin), { recursive: true })
+    await fs.symlink(grok, cursorBin)
+    const cursor = { ...DEFAULT_TEMPLATES.cursor, allowBypass: true }
+    const { ready, refused } = await resolveAgents(["cursor"], { cursor }, { pathVar: path.dirname(cursorBin), cwd: dir, homeDir: dir })
+    expect(ready).toEqual([])
+    expect(refused[0]?.reason).toMatch(/which is Grok, not Cursor/)
   })
 
   it("refuses Cursor's --force by default and allows it, with a warning, when allowBypass is set", async () => {

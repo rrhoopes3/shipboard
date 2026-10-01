@@ -73,7 +73,7 @@ describe("claim → work → push → done", () => {
     expect(claimed).toContain(`Claimed ${id} (attempt 1)`)
     expect(claimed).toContain(`Brief verified at ${queued.job.briefSha.slice(0, 7)}`)
     const claim = board.requests.find((r) => r.path === "/api/runner/claim")
-    expect(claim?.body).toEqual({ runnerId: expect.stringMatching(/^claude-code-mod\/[A-Za-z0-9.-]+\/session-1$/), agents: ["claude-code"] })
+    expect(claim?.body).toEqual({ runnerId: expect.stringMatching(/^claude-code-mod:[A-Za-z0-9._:@-]+:session-1:[0-9a-f]{32}$/), agents: ["claude-code"] })
     expect(claim?.auth).toBe(`Bearer ${board.runnerToken}`)
     expect(board.find(id)?.state).toBe("running")
     expect(board.jobs[0]?.state).toBe("queued")
@@ -154,7 +154,7 @@ describe("claim → work → push → done", () => {
     expect(board.finished).toEqual([
       {
         attemptId: id,
-        runnerId: expect.stringContaining("claude-code-mod/"),
+        runnerId: expect.stringContaining("claude-code-mod:"),
         outcome: expect.objectContaining({ reason: "pushed", commitSha: head, changedPaths: ["site/index.html"], sessionId: "session-1" }),
       },
     ])
@@ -227,6 +227,27 @@ describe("claim → work → push → done", () => {
     const h = await session()
     expect(await h.command("claim")).toContain("No queued claude-code jobs")
     expect(h.submitted).toEqual([])
+  })
+
+  it("uses the board token to poll a private board and never substitutes the runner token", async () => {
+    board.privateRead = true
+    board.queue({ task: "Private brief" })
+    const runnerOnly = await session()
+    await runnerOnly.command("claim --no-start")
+    await runnerOnly.tick(POLL_MS)
+    const privateReads = board.requests.filter((r) => r.method === "GET" && r.path.startsWith(`/api/projects/${board.projectId}`))
+    expect(privateReads.length).toBeGreaterThan(0)
+    expect(privateReads.every((r) => r.auth === undefined)).toBe(true)
+    expect(textOf(await runnerOnly.render())).toContain("board token to read")
+    await runnerOnly.command("done")
+
+    board.queue({ task: "Private verdict" })
+    const withBoardToken = await session({ withBoardToken: true })
+    await withBoardToken.command("claim --no-start")
+    await withBoardToken.tick(POLL_MS)
+    const latestRead = board.requests.filter((r) => r.method === "GET" && r.path.startsWith(`/api/projects/${board.projectId}`)).at(-1)
+    expect(latestRead?.auth).toBe(`Bearer ${board.boardToken}`)
+    expect(textOf(await withBoardToken.render())).not.toContain("board token to read")
   })
 
   it("dispatches a brief to claude-code with the board token, then claims it", async () => {

@@ -16,6 +16,7 @@
 
 import { constants as fsConstants } from "node:fs"
 import fs from "node:fs/promises"
+import os from "node:os"
 import path from "node:path"
 import type { ParserName } from "./outcome.ts"
 import { runProcess, type SpawnObserver } from "./proc.ts"
@@ -62,7 +63,7 @@ export type RenderVars = Record<Placeholder, string>
 const PLACEHOLDER_RE = /\{(prompt|prompt_file|cwd|job_dir|session_uuid|max_turns|budget_usd)\}/g
 const ANY_PLACEHOLDER_RE = /\{([a-z][a-z_]*)\}/g
 
-export const GROK_DEFAULT_BIN = "/Users/grokbot5000/.grok/bin/grok"
+export const GROK_DEFAULT_BIN = "grok"
 
 export const DEFAULT_TEMPLATES: Record<Exclude<TemplateKind, "script">, AgentTemplate> = {
   claude: {
@@ -183,7 +184,7 @@ export const DEFAULT_TEMPLATES: Record<Exclude<TemplateKind, "script">, AgentTem
   cursor: {
     kind: "cursor",
     label: "Cursor",
-    // On this machine a bare `agent` is ~/.grok/bin/agent, i.e. Grok. Set an absolute path.
+    // Grok also installs an `agent` command; resolve the real executable before offering Cursor.
     bin: "agent",
     args: ["-p", "--output-format", "json", "--workspace", "{cwd}", "--trust", "--force", "--sandbox", "enabled", "{prompt}"],
     stdin: null,
@@ -332,6 +333,13 @@ export async function resolveBin(bin: string, pathVar: string, cwd: string): Pro
   return null
 }
 
+/** Grok installs under ~/.grok/bin on systems that do not add that directory to PATH. */
+async function resolveGrokBin(bin: string, pathVar: string, cwd: string, homeDir: string): Promise<string | null> {
+  const onPath = await resolveBin(bin, pathVar, cwd)
+  if (onPath || bin !== GROK_DEFAULT_BIN) return onPath
+  return resolveBin(path.join(homeDir, ".grok", "bin", "grok"), pathVar, cwd)
+}
+
 export type ResolvedAgent = {
   id: string
   template: AgentTemplate
@@ -350,11 +358,13 @@ export type AgentRefusal = { id: string; reason: string }
 export async function resolveAgents(
   ids: readonly string[],
   templates: Readonly<Record<string, AgentTemplate>>,
-  opts: { pathVar: string; cwd: string },
+  opts: { pathVar: string; cwd: string; homeDir?: string },
 ): Promise<{ ready: ResolvedAgent[]; refused: AgentRefusal[] }> {
   const ready: ResolvedAgent[] = []
   const refused: AgentRefusal[] = []
-  const grokReal = await realpathOrNull(GROK_DEFAULT_BIN)
+  const homeDir = opts.homeDir || os.homedir()
+  const grokPath = await resolveGrokBin(GROK_DEFAULT_BIN, opts.pathVar, opts.cwd, homeDir)
+  const grokReal = grokPath ? await realpathOrNull(grokPath) : null
 
   for (const id of ids) {
     const template = templates[id]
@@ -363,9 +373,15 @@ export async function resolveAgents(
       continue
     }
     const warnings: string[] = []
-    const binPath = await resolveBin(template.bin, opts.pathVar, opts.cwd)
+    const binPath = template.kind === "grok"
+      ? await resolveGrokBin(template.bin, opts.pathVar, opts.cwd, homeDir)
+      : await resolveBin(template.bin, opts.pathVar, opts.cwd)
     if (!binPath) {
-      const where = template.bin.includes("/") ? `${template.bin} does not exist or is not executable` : `\`${template.bin}\` was not found on PATH`
+      const where = template.bin.includes("/")
+        ? `${template.bin} does not exist or is not executable`
+        : template.kind === "grok" && template.bin === GROK_DEFAULT_BIN
+          ? "`grok` was not found on PATH or at ~/.grok/bin/grok"
+          : `\`${template.bin}\` was not found on PATH`
       refused.push({ id, reason: `${where}. Install ${template.label} or set templates.${id}.bin to its absolute path.` })
       continue
     }

@@ -139,7 +139,9 @@ describe("api without tokens (local)", () => {
     const csp = page.headers.get("content-security-policy") ?? ""
     expect(csp).toContain("default-src 'none'")
     expect(csp).toContain("sandbox")
-    expect(csp).not.toContain("script-src")
+    expect(csp).toContain("script-src 'none'")
+    expect(csp).toContain("sandbox allow-same-origin")
+    expect(csp).not.toContain("allow-scripts")
     expect(page.headers.get("referrer-policy")).toBe("no-referrer")
     expect(await page.text()).toContain("Preview me")
     expect((await fetch(`${server.url}/preview/${project.id}/main/nope.html`)).status).toBe(404)
@@ -195,6 +197,44 @@ describe("api with tokens", () => {
     expect((await api(server.url, "b-token").get("/api/projects")).status).toBe(200)
     expect((await api(server.url).get("/api/health")).status).toBe(200)
   })
+
+  it("grants a scoped preview cookie without granting API access", async () => {
+    const server = await boot({ boardToken: "b-token", runnerToken: "r-token", publicRead: false })
+    const board = api(server.url, "b-token")
+    const { project } = await board.json<{ project: { id: string } }>(await board.post("/api/projects", { name: "Private preview" }))
+    const route = `/api/projects/${project.id}/preview-session`
+    const preview = `/preview/${project.id}/main/site/index.html`
+
+    expect((await api(server.url).post(route)).status).toBe(401)
+    expect((await api(server.url, "r-token").post(route)).status).toBe(401)
+    expect((await fetch(`${server.url}${preview}`)).status).toBe(401)
+
+    const grant = await board.post(route)
+    expect(grant.status).toBe(200)
+    const setCookie = grant.headers.get("set-cookie") ?? ""
+    expect(setCookie).toContain(`Path=/preview/${project.id}/`)
+    expect(setCookie).toContain("HttpOnly")
+    expect(setCookie).toContain("Max-Age=300")
+    expect(setCookie).toContain("SameSite=Lax")
+    expect(setCookie).not.toContain("b-token")
+    const cookie = setCookie.split(";")[0]!
+    const headers = { Cookie: cookie }
+    const page = await api(server.url).get(preview, headers)
+    expect(page.status).toBe(200)
+    expect(page.headers.get("content-security-policy")).toContain("sandbox")
+    expect(page.headers.get("cross-origin-resource-policy")).toBe("same-origin")
+    expect(await page.text()).toContain("Private preview")
+    expect((await api(server.url).get(`/preview/${project.id}/main/README.md`, headers)).status).toBe(200)
+    expect((await api(server.url).get("/preview/other-project-1234/main/site/index.html", headers)).status).toBe(401)
+    expect((await api(server.url).get("/api/projects", headers)).status).toBe(401)
+    expect((await api(server.url).post("/api/projects", { name: "Forbidden" }, headers)).status).toBe(401)
+    expect((await api(server.url).get(preview, { Cookie: `${cookie}0` })).status).toBe(401)
+
+    const revoked = await fetch(`${server.url}${route}`, { method: "DELETE" })
+    expect(revoked.status).toBe(204)
+    expect(revoked.headers.get("set-cookie")).toContain("Max-Age=0")
+    expect(revoked.headers.get("set-cookie")).toContain(`Path=/preview/${project.id}/`)
+  })
 })
 
 describe("api on a cloudflare-shaped host", () => {
@@ -237,5 +277,30 @@ describe("api on a cloudflare-shaped host", () => {
     expect(await safeEqual("abc", "abd")).toBe(false)
     expect(await safeEqual("abc", "abcd")).toBe(false)
     expect(await safeEqual("", "")).toBe(true)
+  })
+
+  it("invalidates preview cookies after board token rotation", async () => {
+    const rotatingHost: Host = {
+      ...cfHost,
+      publicRead: false,
+      boardToken: "first-token",
+      project: async () => ({ preview: async () => ({ body: new TextEncoder().encode("private"), contentType: "text/html" }) }) as unknown as ProjectHandle,
+    }
+    const app = createApi(rotatingHost)
+    const origin = "https://shipboard.example"
+    const grant = await app.request(`${origin}/api/projects/private-board-1234/preview-session`, {
+      method: "POST",
+      headers: { Authorization: "Bearer first-token" },
+    })
+    expect(grant.status).toBe(200)
+    const setCookie = grant.headers.get("set-cookie") ?? ""
+    expect(setCookie).toContain("SameSite=Lax")
+    expect(setCookie).toContain("Secure")
+    const cookie = setCookie.split(";")[0]!
+    const preview = `${origin}/preview/private-board-1234/main/site/index.html`
+    expect((await app.request(preview, { headers: { Cookie: cookie } })).status).toBe(200)
+    expect((await app.request("https://other.example/preview/private-board-1234/main/site/index.html", { headers: { Cookie: cookie } })).status).toBe(401)
+    rotatingHost.boardToken = "second-token"
+    expect((await app.request(preview, { headers: { Cookie: cookie } })).status).toBe(401)
   })
 })

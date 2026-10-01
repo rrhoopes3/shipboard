@@ -2,7 +2,7 @@
 // GET /api/projects/:id?since=<version> every 2 s, re-renders only cards whose data changed, and
 // moves cards between lanes with FLIP so a re-run reads as motion, not a page refresh.
 
-import { api, previewSrc } from "./api.js"
+import { api, getToken, previewSrc } from "./api.js"
 import { authBanner, explainBlock, handleAuthError, mutationBlock, onAuthChange, openUnlock } from "./auth.js"
 import { createFeed, renderTicker } from "./activity.js"
 import { pulseLive, setCrumbs, setLive, setSkip, showKeys, hideKeys, toggleKeys } from "./chrome.js"
@@ -61,6 +61,7 @@ export function mountBoard(view, projectId) {
     inFlight: false,
     stopped: false,
     state: "loading",
+    privateRead: false,
   }
 
   setCrumbs([{ label: "Projects", href: href("/") }, { label: projectId }])
@@ -610,6 +611,7 @@ export function mountBoard(view, projectId) {
     s.inFlight = true
     try {
       const res = await api.board(projectId, s.board ? s.board.version : null)
+      s.privateRead = await api.ensurePreviewSession(projectId)
       s.inFlight = false
       if (s.stopped) return
       const wasOffline = s.fails > 0
@@ -816,14 +818,21 @@ export function mountBoard(view, projectId) {
   document.addEventListener("keydown", onKey)
   document.addEventListener("visibilitychange", onVisible)
   const offAuth = onAuthChange(() => {
+    if (s.privateRead && !getToken()) {
+      showReadLock()
+      return
+    }
     if (s.state === "error" && !s.board) {
       showLoading()
       pollNow()
       return
     }
     if (s.board) {
-      for (const card of cards.values()) delete card.dataset.sig
-      render()
+      if (s.privateRead) pollNow()
+      else {
+        for (const card of cards.values()) delete card.dataset.sig
+        render()
+      }
     }
   })
   s.ticker = setInterval(tick, 1000)
@@ -846,4 +855,3 @@ export function mountBoard(view, projectId) {
     },
   }
 }
-

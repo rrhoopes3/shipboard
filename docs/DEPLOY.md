@@ -4,6 +4,10 @@ This puts the board on Workers, with project repos in Artifacts, one Durable Obj
 and a Workflow that hears every push. Agents still run on your own machine through the runner and
 talk to the deployed board over HTTPS.
 
+The Cloudflare host and Wrangler config are implemented, but this repository has not yet been
+deployed and checked end to end against a live Cloudflare account. Treat the steps below as the
+deployment procedure to verify, not evidence of an existing production board.
+
 ## What you need
 
 - A Cloudflare account on **Workers Paid**. Artifacts is not available on the Free plan, and
@@ -99,6 +103,10 @@ in that browser's localStorage and sent as a Bearer header). Within a few second
 attempts sit in the Ship lane. Ship two; the third moves to Re-run with a conflict on
 `site/index.html`; re-run it and ship the new attempt.
 
+For `PUBLIC_READ=false`, the UI exchanges the board token for a five-minute cookie limited to one
+project's `/preview/` path before opening a preview. The cookie contains no board token, is not
+accepted by board API routes, and is cleared when the UI is locked.
+
 Things worth looking at while you do that:
 
 ```bash
@@ -187,8 +195,10 @@ The browser has an old token in localStorage, or the runner is using the board U
 variable. The runner uses `SHIPBOARD_RUNNER_TOKEN`; the agent CLI uses `SHIPBOARD_TOKEN`.
 
 **Reads need a token**
-Set `"PUBLIC_READ": "false"` in `wrangler.jsonc` vars and redeploy. The board, previews and diffs
-then need the board token too.
+Set `"PUBLIC_READ": "false"` in `wrangler.jsonc` vars and redeploy. API reads and diffs then
+need the board token. The browser requests a short-lived preview session with the board token,
+so the preview iframe and its assets can load without placing that token in the URL. The session
+is scoped to the project's previews and does not authorize board API calls.
 
 **Importing a repo fails**
 Only public `https://` URLs import. The repo's default branch must be `main`, because every fork

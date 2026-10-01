@@ -1,10 +1,12 @@
 // The board's HTTP API (docs/ARCHITECTURE.md, "HTTP API"). JSON in and out, the board token as a
-// Bearer header (never a cookie, so there is no CSRF surface), errors as one plain sentence.
+// Bearer header. Preview documents use a separate, short-lived, HttpOnly scoped cookie because
+// iframe navigation and relative assets cannot send an Authorization header.
 // With ?fixture=<name> every call is answered from public/fixtures/<name>/ instead.
 
 import { noteServerDate } from "./clock.js"
 
 const TOKEN_KEY = "shipboard.boardToken"
+const PREVIEW_PROJECTS_KEY = "shipboard.previewProjects"
 
 const params = new URLSearchParams(location.search)
 const fixtureParam = (params.get("fixture") || "").toLowerCase().replace(/[^a-z0-9-]/g, "")
@@ -26,6 +28,54 @@ export class ApiError extends Error {
 // ------------------------------------------------------------------ token
 
 let memoryToken = ""
+const previewExpires = new Map()
+const previewPending = new Map()
+const previewProjects = new Set()
+let revoking = Promise.resolve()
+
+try {
+  for (const id of JSON.parse(localStorage.getItem(PREVIEW_PROJECTS_KEY) || "[]")) {
+    if (/^[a-z0-9][a-z0-9-]*$/.test(id)) previewProjects.add(id)
+  }
+} catch {
+  // Storage may be unavailable or contain an old value.
+}
+
+function rememberPreviewProject(id) {
+  for (const known of knownPreviewProjects()) previewProjects.add(known)
+  previewProjects.add(id)
+  try { localStorage.setItem(PREVIEW_PROJECTS_KEY, JSON.stringify([...previewProjects])) } catch {}
+}
+
+function knownPreviewProjects() {
+  const ids = new Set(previewProjects)
+  try {
+    for (const id of JSON.parse(localStorage.getItem(PREVIEW_PROJECTS_KEY) || "[]")) {
+      if (/^[a-z0-9][a-z0-9-]*$/.test(id)) ids.add(id)
+    }
+  } catch {}
+  return [...ids]
+}
+
+function revokePreviews() {
+  const pending = [...previewPending.values()]
+  previewExpires.clear()
+  previewPending.clear()
+  revoking = revoking.then(async () => {
+    await Promise.allSettled(pending)
+    const ids = knownPreviewProjects()
+    const results = await Promise.allSettled(ids.map((id) => fetch(`/api/projects/${encodeURIComponent(id)}/preview-session`, {
+      method: "DELETE",
+      credentials: "same-origin",
+      cache: "no-store",
+    })))
+    for (const [index, result] of results.entries()) {
+      if (result.status === "fulfilled" && result.value.ok) previewProjects.delete(ids[index])
+      else previewProjects.add(ids[index])
+    }
+    try { localStorage.setItem(PREVIEW_PROJECTS_KEY, JSON.stringify([...previewProjects])) } catch {}
+  }).catch(() => {})
+}
 
 export function getToken() {
   try {
@@ -36,6 +86,8 @@ export function getToken() {
 }
 
 export function setToken(value) {
+  const previous = getToken()
+  if (previous && previous !== value) revokePreviews()
   memoryToken = value || ""
   try {
     if (value) localStorage.setItem(TOKEN_KEY, value)
@@ -44,6 +96,16 @@ export function setToken(value) {
     // Storage can be blocked (private windows, strict settings). The token then lives for this tab only.
   }
 }
+
+window.addEventListener("storage", (event) => {
+  if (event.key === TOKEN_KEY && event.oldValue && event.oldValue !== event.newValue) revokePreviews()
+})
+
+window.addEventListener("online", () => {
+  if (!getToken() && knownPreviewProjects().length) revokePreviews()
+})
+
+if (!getToken() && previewProjects.size) revokePreviews()
 
 // ------------------------------------------------------------------ requests
 
@@ -116,6 +178,22 @@ export const api = {
       },
     )
     return configPromise
+  },
+  async ensurePreviewSession(projectId) {
+    if (fixture || (await this.config()).publicRead) return false
+    await revoking
+    if (previewExpires.get(projectId) > Date.now() + 60_000) return true
+    if (previewPending.has(projectId)) return previewPending.get(projectId)
+    const token = getToken()
+    if (!token) throw new ApiError("This board needs its board token to read.", 401)
+    rememberPreviewProject(projectId)
+    const pending = request("POST", `/api/projects/${enc(projectId)}/preview-session`).then(({ data }) => {
+      if (getToken() !== token) throw new ApiError("The board token changed while opening the preview.", 401)
+      previewExpires.set(projectId, Date.parse(data.expiresAt))
+      return true
+    }).finally(() => previewPending.delete(projectId))
+    previewPending.set(projectId, pending)
+    return pending
   },
   async projects() {
     return (await request("GET", "/api/projects")).data.projects

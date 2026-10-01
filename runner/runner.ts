@@ -176,7 +176,7 @@ export async function prepareAgents(
 ): Promise<{ ready: ResolvedAgent[]; refused: AgentRefusal[]; explicit: boolean }> {
   const explicit = config.agents.length > 0
   const ids = explicit ? config.agents : Object.keys(config.templates)
-  const { ready, refused } = await resolveAgents(ids, config.templates, { pathVar: hostEnv.PATH ?? "", cwd })
+  const { ready, refused } = await resolveAgents(ids, config.templates, { pathVar: hostEnv.PATH ?? "", cwd, homeDir: hostEnv.HOME })
   return { ready, refused, explicit }
 }
 

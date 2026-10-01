@@ -1119,21 +1119,11 @@ export class ProjectService implements ProjectHandle {
     }
   }
 
-  /** One sentence naming the conflicting paths and the shipped task that moved main. */
+  /** Describe the conflict without guessing which ship caused it from timestamps or paths. */
   private discardReason(state: ProjectState, old: Attempt): string {
     if (old.status === "ready" && old.merge?.state === "conflict") {
       const paths = old.merge.paths
       const where = paths.length ? ` in ${listPhrase(paths)}` : ""
-      const touched = new Set(paths)
-      const shippedSince = state.attempts
-        .filter((item) => item.status === "shipped" && item.briefId !== old.briefId && item.updatedAt >= old.createdAt)
-        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
-      const mover =
-        shippedSince.find((item) => item.digest?.files.some((file) => touched.has(file.path))) ?? shippedSince[0]
-      if (mover) {
-        const task = state.briefs.find((brief) => brief.id === mover.briefId)?.task ?? mover.id
-        return `Conflicted with main${where} after "${oneLine(task, 80)}" shipped.`
-      }
       return `Conflicted with main${where}.`
     }
     if (old.status === "failed") {

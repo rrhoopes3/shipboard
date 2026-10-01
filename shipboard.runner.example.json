@@ -26,7 +26,7 @@
 
     "grok": {
       "$comment": "These are the built-in grok args, spelled out. Grok 1.0.44 cancels headless runs under acceptEdits, so it uses --always-approve, which the runner only accepts together with Grok's Seatbelt workspace (or strict) sandbox; the --deny rules still win. Never --trust, so the clone's own .claude/.grok config stays untrusted.",
-      "bin": "/Users/grokbot5000/.grok/bin/grok",
+      "bin": "grok",
       "args": [
         "--prompt-file", "{prompt_file}", "--cwd", "{cwd}", "--output-format", "json",
         "--always-approve", "--sandbox", "workspace",

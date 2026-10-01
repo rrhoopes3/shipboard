@@ -48,6 +48,7 @@ export class MockBoard {
   gitAuth: string[] = []
   minted: GitCredentials[] = []
   finished: { attemptId: string; runnerId: string; outcome: JobOutcome }[] = []
+  privateRead = false
   readonly runnerToken = "runner-token-for-tests-0001"
   readonly boardToken = "board-token-for-tests-0002"
   private secrets = new Map<string, { repo: string; scope: "read" | "write"; expires: number }>()
@@ -243,6 +244,7 @@ export class MockBoard {
     const input = (parsed ?? {}) as Record<string, unknown>
 
     if (req.method === "GET" && url.pathname === `/api/projects/${this.projectId}`) {
+      if (this.privateRead && bearer !== this.boardToken) return send(401, { error: "This board needs its board token to read." })
       const since = url.searchParams.get("since")
       if (since !== null && Number(since) === this.version) return send(304)
       return send(200, this.board())

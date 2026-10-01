@@ -123,6 +123,13 @@ describe("grok-json", () => {
     })
   })
 
+  it("keeps Grok sentence punctuation and separates wrapped summary lines", () => {
+    const stdout = JSON.stringify({ stopReason: "end_turn", text: "Work log.\n\nChanged site/index.html.\nChecked the result." })
+    const out = parseOutcome("grok-json", input(stdout))
+    expect(out.summary).toBe("Work log.\n\nChanged site/index.html.\nChecked the result.")
+    expect(lastParagraph(out.summary)).toBe("Changed site/index.html. Checked the result.")
+  })
+
   it("does not accept the README's PascalCase EndTurn", () => {
     const pascal = fixture("grok-success.json").replace('"end_turn"', '"EndTurn"')
     expect(parseOutcome("grok-json", input(pascal)).ok).toBe(false)

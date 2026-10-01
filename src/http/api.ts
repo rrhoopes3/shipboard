@@ -24,12 +24,13 @@ export const BOARD_CSP = [
 
 export const PREVIEW_CSP = [
   "default-src 'none'",
-  "style-src 'unsafe-inline'",
+  "script-src 'none'",
+  "style-src 'self' 'unsafe-inline'",
   "img-src data: blob: 'self'",
   "base-uri 'none'",
   "form-action 'none'",
   "frame-ancestors 'self'",
-  "sandbox",
+  "sandbox allow-same-origin",
 ].join("; ")
 
 export type StaticFile = { body: Uint8Array; contentType: string }
@@ -55,6 +56,23 @@ const AGENT_ID = /^[a-z0-9][a-z0-9._-]{0,39}$/
 const SHA = /^[0-9a-f]{40}$/
 
 const encoder = new TextEncoder()
+const PREVIEW_COOKIE = "shipboard_preview"
+const PREVIEW_TTL_SECONDS = 300
+
+function previewCookiePath(projectId: string): string {
+  return `/preview/${projectId}/`
+}
+
+async function previewSignature(secret: string, payload: string): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(payload)))
+  return Array.from(signature, (byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
+function previewCookie(c: Context, projectId: string, value: string, maxAge: number): void {
+  const secure = new URL(c.req.url).protocol === "https:" ? "; Secure" : ""
+  c.header("Set-Cookie", `${PREVIEW_COOKIE}=${value}; Path=${previewCookiePath(projectId)}; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${secure}`, { append: true })
+}
 
 /** Constant-time string comparison: compares SHA-256 digests so length leaks nothing either. */
 export async function safeEqual(a: string, b: string): Promise<boolean> {
@@ -219,6 +237,24 @@ export function createApi(host: Host, opts: ApiOptions = {}): Hono {
     }
     if ((await matches(runner)) || (await matches(board))) return
     throw new PortError("This action needs the runner token.", 401, "unauthorized")
+  }
+
+  async function previewAuthorized(c: Context, projectId: string): Promise<void> {
+    if (host.publicRead) return
+    if (bearer(c)) return authorize(c, "read")
+    const secret = host.boardToken
+    if (!secret) return authorize(c, "read")
+    const cookie = (c.req.header("cookie") ?? "").split(";").map((part) => part.trim()).find((part) => part.startsWith(`${PREVIEW_COOKIE}=`))?.slice(PREVIEW_COOKIE.length + 1)
+    const match = cookie && /^(\d+)\.([0-9a-f]{64})$/.exec(cookie)
+    if (match) {
+      const expires = Number(match[1])
+      if (Number.isSafeInteger(expires) && expires > Date.now() / 1000) {
+        const origin = new URL(c.req.url).origin
+        const expected = await previewSignature(secret, `${projectId}:${expires}:${origin}`)
+        if (await safeEqual(match[2]!, expected)) return
+      }
+    }
+    throw new PortError("This board needs its board token to read.", 401, "unauthorized")
   }
 
   async function projectFor(id: string): Promise<ProjectHandle> {
@@ -451,6 +487,25 @@ export function createApi(host: Host, opts: ApiOptions = {}): Hono {
 
   // ---------------------------------------------------------------- previews
 
+  app.post("/api/projects/:projectId/preview-session", async (c) => {
+    await authorize(c, "board")
+    const projectId = c.req.param("projectId")
+    if (!isProjectId(projectId)) throw new PortError("Not found.", 404)
+    if (!host.boardToken) throw new PortError("Preview sessions need a board token.", 503)
+    const expires = Math.floor(Date.now() / 1000) + PREVIEW_TTL_SECONDS
+    const origin = new URL(c.req.url).origin
+    const signature = await previewSignature(host.boardToken, `${projectId}:${expires}:${origin}`)
+    previewCookie(c, projectId, `${expires}.${signature}`, PREVIEW_TTL_SECONDS)
+    return c.json({ expiresAt: new Date(expires * 1000).toISOString() })
+  })
+
+  app.delete("/api/projects/:projectId/preview-session", async (c) => {
+    const projectId = c.req.param("projectId")
+    if (!isProjectId(projectId)) throw new PortError("Not found.", 404)
+    previewCookie(c, projectId, "", 0)
+    return c.body(null, 204)
+  })
+
   app.get("/preview/:projectId/:ref", (c) => {
     const projectId = c.req.param("projectId")
     const ref = c.req.param("ref")
@@ -459,10 +514,10 @@ export function createApi(host: Host, opts: ApiOptions = {}): Hono {
   })
 
   app.get("/preview/:projectId/:ref/*", async (c) => {
-    await authorize(c, "read")
     const projectId = c.req.param("projectId")
     const ref = c.req.param("ref")
     if (!isProjectId(projectId) || (ref !== "main" && !isAttemptId(ref))) throw new PortError("Not found.", 404)
+    await previewAuthorized(c, projectId)
     const prefix = `/preview/${projectId}/${ref}/`
     const pathname = new URL(c.req.url).pathname
     if (!pathname.startsWith(prefix)) throw new PortError("Not found.", 404)

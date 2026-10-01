@@ -88,7 +88,7 @@ export function boardClient(fetch: Fetch, opts: { url: string; runnerToken?: str
     /** The project's board, or null when it has not changed since `since` (304). */
     async board(projectId: string, since?: number): Promise<BoardView | null> {
       const query = since === undefined ? "" : `?since=${since}`
-      const { status, data } = await call("GET", `/api/projects/${id(projectId)}${query}`, board ?? runner)
+      const { status, data } = await call("GET", `/api/projects/${id(projectId)}${query}`, board)
       return status === 304 ? null : (data as BoardView)
     },
 

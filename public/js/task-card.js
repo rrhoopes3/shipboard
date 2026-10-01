@@ -26,7 +26,7 @@ function pushedAt(a) {
 
 const isWaiting = (a) => a.status === "waiting" || (a.status === "ready" && !a.merge && !a.digest)
 
-/** The newest `shipped` activity at or before `at`: the ship that moved main under this attempt. */
+/** The newest shipped activity at or before `at`, for the main timeline. */
 export function shipBefore(board, at) {
   let best = null
   for (const entry of board.activity) {
@@ -384,14 +384,11 @@ function reviewBlock(r) {
 }
 
 function conflictBox(a, ctx) {
-  const shipped = shipBefore(ctx.board, a.merge.checkedAt)
-  const task = taskTitleOf(ctx.board, shipped)
   return h(
     "div",
     { class: "conflict", role: "group", "aria-label": "Conflict with main" },
     h("p", { class: "conflict-title" }, icon("x"), h("span", null, "Conflicts with main ", sha(a.merge.mainSha))),
     a.merge.paths.length ? h("ul", { class: "conflict-paths" }, a.merge.paths.map((p) => h("li", null, p))) : null,
-    task ? h("p", { class: "conflict-cause" }, `Main moved when “${task}” shipped at ${hm(shipped.at)}.`) : null,
   )
 }
 
@@ -492,7 +489,7 @@ function primaryArea(task, ctx) {
       const agent = shortLabel(a.agentLabel)
       const caption =
         a.status === "failed"
-          ? `${agent} finished without a usable push${a.job && a.job.outcome ? `: ${a.job.outcome.summary.replace(/\.$/, "")}` : ""}. Re-run tries the same brief on a fresh fork.`
+          ? `${agent} finished without a usable push. Re-run tries the same brief on a fresh fork.`
           : [`Drops this diff${size ? ` (+${size.add} −${size.del})` : ""}. ${agent} runs the same brief again on a fresh fork of `, sha(main), ". Nobody resolves the conflict by hand."]
       return h(
         "div",
@@ -759,7 +756,7 @@ function previewExpand(task, ctx) {
     { class: "preview-box" },
     h("iframe", {
       src,
-      sandbox: "",
+      sandbox: "allow-same-origin",
       referrerpolicy: "no-referrer",
       loading: "lazy",
       tabindex: "-1",

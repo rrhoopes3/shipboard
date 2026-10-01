@@ -144,7 +144,7 @@ function renderPopover(p) {
   if (token && !rejected) {
     p.append(
       h("p", { class: "pop-title", id: "unlock-title" }, "Board unlocked"),
-      note,
+      ...(note ? [note] : []),
       h("p", { class: "pop-copy" }, "Changes from this browser carry the stored token. Lock to forget it here."),
       h(
         "div",
@@ -224,6 +224,13 @@ document.addEventListener(
   },
   true,
 )
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== "shipboard.boardToken") return
+  rejected = false
+  renderLock()
+  emit()
+})
 
 document.addEventListener("click", (e) => {
   if (!isOpen() || opening) return

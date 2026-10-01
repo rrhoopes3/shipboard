@@ -35,7 +35,7 @@ export function register(on: On, options: PluginOptions): void {
     const env = await readEnv($)
     const sessionId = await $.session.id()
     const host = await hostName($)
-    const sb = new Shipboard(configOf(options, env), { runnerId: `claude-code-mod/${host}/${sessionId}`, sessionId, home: env.home })
+    const sb = new Shipboard(configOf(options, env), { runnerId: runnerIdFor(host, sessionId), sessionId, home: env.home })
     board = sb
     storeKey = `job:${sessionId}`
     // Commands and tools are registered at session.start: https://code.claude.com/docs/en/plugins/mods/api.md#add-a-command-or-a-tool
@@ -190,10 +190,24 @@ async function readEnv($: Api): Promise<EnvValues & { home?: string }> {
 async function hostName($: Api): Promise<string> {
   try {
     const res = await $.process.run(["hostname"], { timeoutMs: 5000 })
-    return res.stdout.trim().replace(/[^A-Za-z0-9.-]/g, "") || "localhost"
+    return res.stdout.trim() || "localhost"
   } catch {
     return "localhost"
   }
+}
+
+/** The API accepts 80 characters from [A-Za-z0-9._:@-], with a letter/digit first. */
+export function runnerIdFor(host: string, sessionId: string): string {
+  const label = (value: string, max: number) => value.replace(/[^A-Za-z0-9._:@-]+/g, "-").slice(0, max) || "unknown"
+  // Keep the full identity in the fingerprint even when the readable labels are shortened.
+  // FNV-1a needs no host crypto API and this ID is a lease label, not an authentication token.
+  const identity = JSON.stringify([host, sessionId])
+  const hash = (seed: bigint) => {
+    let value = seed
+    for (let i = 0; i < identity.length; i++) value = BigInt.asUintN(64, (value ^ BigInt(identity.charCodeAt(i))) * 0x100000001b3n)
+    return value.toString(16).padStart(16, "0")
+  }
+  return `claude-code-mod:${label(host, 16)}:${label(sessionId, 10)}:${hash(0xcbf29ce484222325n)}${hash(0x84222325cbf29ce4n)}`
 }
 
 async function autoclaim($: Api, sb: Shipboard): Promise<void> {
