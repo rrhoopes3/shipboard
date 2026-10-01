@@ -2,8 +2,9 @@
 
 **Raised by:** operator, 2026-10-01 ("tentatively interested").
 **Status:** brief + Grok review folded in (addendum at the foot, 2026-10-01). Nothing built, no Cloudflare account changes, no wrangler on the box. **Read the addendum first; it supersedes Gate 0, the stretch list, and open question 3.**
-**Repo:** none yet. If this goes ahead: a new repo (`sites/` is wrong — it is not a site; use
-`~/worktrees/` or a fresh `~/projects/` dir), never under a Caddy docroot.
+**Repo:** `github.com/rrhoopes3/shipboard` (private, MIT), checkout `~/projects/shipboard`, symlinked as
+`Brain/shipboard`. Created 2026-10-01. Not a site; never under a Caddy docroot. This brief is mirrored at
+`docs/PLAN.md` there; edit here and copy over.
 
 ---
 
