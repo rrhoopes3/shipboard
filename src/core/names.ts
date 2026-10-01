@@ -21,7 +21,7 @@ export function slug(input: string, max: number): string {
 
 export function randomHex(bytes = 2): string {
   const buf = new Uint8Array(bytes)
-  globalThis.crypto.getRandomValues(buf)
+  crypto.getRandomValues(buf)
   return [...buf].map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 

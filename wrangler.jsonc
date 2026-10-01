@@ -1,0 +1,85 @@
+// Shipboard on Cloudflare. docs/ARCHITECTURE.md ("Hosts", "Cloudflare") is the contract for this file;
+// docs/DEPLOY.md has the steps. Secrets (not here): BOARD_TOKEN, RUNNER_TOKEN.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "shipboard",
+  "main": "src/cloudflare/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  // isomorphic-git does trial merges and ship merges in memory inside the project Durable Object.
+  "limits": { "cpu_ms": 300000 },
+
+  // The board UI. Only the API and previews reach the Worker; /p/<id> routes get the app shell.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/preview/*"],
+    "not_found_handling": "single-page-application"
+  },
+
+  // There is no local Artifacts simulator: even `wrangler dev` talks to the real service.
+  "artifacts": [{ "binding": "ARTIFACTS", "namespace": "shipboard", "remote": true }],
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "PROJECT", "class_name": "ProjectDO" },
+      { "name": "REGISTRY", "class_name": "RegistryDO" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ProjectDO", "RegistryDO"] }],
+
+  "workflows": [{ "name": "shipboard-push", "binding": "PUSH_WORKFLOW", "class_name": "PushWorkflow" }],
+
+  // Every push to any repo in the namespace starts PushWorkflow. The shape is wrangler's schema
+  // (`targets[]`, `workflow_name`); the docs guide's `target`/`workflowName` shape fails validation.
+  "triggers": {
+    "events": [
+      {
+        "type": "cf.artifacts.repo.pushed",
+        "filter": { "namespace": "shipboard" },
+        "targets": [{ "type": "workflow", "workflow_name": "shipboard-push" }]
+      }
+    ]
+  },
+
+  // Optional reviewer. With no AI binding or an empty REVIEW_MODEL the board works without reviews.
+  // Workers AI always runs remotely, in `wrangler dev` too.
+  "ai": { "binding": "AI", "remote": true },
+
+  "vars": {
+    "PUBLIC_READ": "true",
+    "REVIEW_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "ARTIFACTS_NAMESPACE": "shipboard"
+  },
+
+  "env": {
+    // `wrangler dev --env dev` / `wrangler deploy --env dev`: same Worker, a separate namespace, so
+    // scratch repos never mix with the real board. Bindings below are not inherited and are repeated.
+    "dev": {
+      "name": "shipboard-dev",
+      "artifacts": [{ "binding": "ARTIFACTS", "namespace": "shipboard-dev", "remote": true }],
+      "durable_objects": {
+        "bindings": [
+          { "name": "PROJECT", "class_name": "ProjectDO" },
+          { "name": "REGISTRY", "class_name": "RegistryDO" }
+        ]
+      },
+      "workflows": [{ "name": "shipboard-dev-push", "binding": "PUSH_WORKFLOW", "class_name": "PushWorkflow" }],
+      "triggers": {
+        "events": [
+          {
+            "type": "cf.artifacts.repo.pushed",
+            "filter": { "namespace": "shipboard-dev" },
+            "targets": [{ "type": "workflow", "workflow_name": "shipboard-dev-push" }]
+          }
+        ]
+      },
+      "ai": { "binding": "AI", "remote": true },
+      "vars": {
+        "PUBLIC_READ": "true",
+        "REVIEW_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        "ARTIFACTS_NAMESPACE": "shipboard-dev"
+      }
+    }
+  }
+}
