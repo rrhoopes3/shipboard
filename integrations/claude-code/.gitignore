@@ -1,0 +1,2 @@
+# Claude Code writes version-exact mod type declarations here on every --plugin-dir load.
+.claude-plugin/types/

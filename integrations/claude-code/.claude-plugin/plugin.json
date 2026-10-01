@@ -1,0 +1,46 @@
+{
+  "name": "shipboard",
+  "displayName": "Shipboard",
+  "version": "0.1.0",
+  "description": "Join a shipboard board from an interactive Claude Code session: claim a brief, work it in its own fork, push through a per-fork token Claude never sees, and watch the board's verdict in a pane.",
+  "author": {
+    "name": "rrhoopes3"
+  },
+  "repository": "https://github.com/rrhoopes3/shipboard",
+  "license": "MIT",
+  "keywords": ["mods", "shipboard", "git", "agents", "cloudflare-artifacts"],
+  "userConfig": {
+    "url": {
+      "type": "string",
+      "title": "Board URL",
+      "description": "The shipboard server, such as http://127.0.0.1:8787 or your Worker's URL. Falls back to SHIPBOARD_URL, then http://127.0.0.1:8787.",
+      "required": false
+    },
+    "runner_token": {
+      "type": "string",
+      "title": "Runner token",
+      "description": "The board's RUNNER_TOKEN, used to claim jobs and mint per-fork git tokens. Kept in the OS credential store. Falls back to SHIPBOARD_RUNNER_TOKEN.",
+      "required": false,
+      "sensitive": true
+    },
+    "board_token": {
+      "type": "string",
+      "title": "Board token",
+      "description": "The board's BOARD_TOKEN. Only /shipboard dispatch needs it. Kept in the OS credential store. Falls back to SHIPBOARD_TOKEN.",
+      "required": false,
+      "sensitive": true
+    },
+    "project": {
+      "type": "string",
+      "title": "Default project",
+      "description": "Project id that /shipboard dispatch uses when --project is not given. Falls back to SHIPBOARD_PROJECT.",
+      "required": false
+    },
+    "autoclaim": {
+      "type": "boolean",
+      "title": "Claim on start",
+      "description": "Claim the next queued claude-code job when an interactive session starts. SHIPBOARD_AUTOCLAIM=1 does the same.",
+      "default": false
+    }
+  }
+}
