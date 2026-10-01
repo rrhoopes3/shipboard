@@ -9,6 +9,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import type { ProjectHandle } from "../../src/core/ports.ts"
+import { LANES, placement } from "../../src/core/state.ts"
 import type {
   Action,
   Activity,
@@ -32,7 +33,6 @@ import { arr, bool, iso, lit, nullable, num, obj, optional, sha40, str, validate
 
 // ------------------------------------------------------------------ the contract, as schemas
 
-const LANES = ["rerun", "ship", "review", "working", "parked", "shipped"] as const satisfies readonly Lane[]
 const action = lit<Action>("ship", "ship-anyway", "rerun", "park", "unpark", "wait", "none")
 
 const agentInfo = obj<AgentInfo>({ id: str, label: str, kind: lit("cli", "demo", "manual"), lastSeenAt: optional(iso) })
@@ -153,16 +153,6 @@ const json = files.filter((f) => f.endsWith(".json"))
 const boardFiles = json.filter((f) => /\/board(-[a-z0-9-]+)?\.json$/.test(f))
 const boards = new Map(boardFiles.map((f) => [f, read(f) as BoardView]))
 
-// The lane table in docs/ARCHITECTURE.md.
-const PLACEMENT: Record<Lane, { primary: Action; secondary: Action[]; statuses: AttemptView["status"][] }> = {
-  rerun: { primary: "rerun", secondary: ["park"], statuses: ["ready", "failed"] },
-  ship: { primary: "ship", secondary: ["park", "rerun"], statuses: ["ready"] },
-  review: { primary: "ship-anyway", secondary: ["park", "rerun"], statuses: ["ready"] },
-  working: { primary: "wait", secondary: ["park"], statuses: ["waiting", "ready"] },
-  parked: { primary: "unpark", secondary: ["rerun"], statuses: ["parked"] },
-  shipped: { primary: "none", secondary: [], statuses: ["shipped"] },
-}
-
 describe("UI fixtures", () => {
   it("are what test/ui/build-fixtures.ts produces", () => {
     const built = buildFixtures()
@@ -211,10 +201,10 @@ describe("UI fixtures", () => {
     it("gives every card the one button the lane table says", () => {
       for (const { lane, tasks } of board.lanes) {
         for (const t of tasks) {
-          const rule = PLACEMENT[lane]
+          const rule = placement(t.current)
+          expect(rule.lane).toBe(lane)
           expect(t.current.primary, t.brief.task).toBe(rule.primary)
           expect(t.current.secondary, t.brief.task).toEqual(rule.secondary)
-          expect(rule.statuses, t.brief.task).toContain(t.current.status)
           if (lane === "rerun" && t.current.status === "ready") expect(t.current.merge?.state).toBe("conflict")
           if (lane === "ship") expect(t.current.digest?.satisfies).not.toBe("no")
         }
@@ -319,6 +309,21 @@ describe("UI fixtures", () => {
     expect(rerun?.brief).toEqual(conflict?.brief)
     expect(rerun?.current.baseSha).toBe(before.project.mainSha)
     expect(rerun?.history[0]?.status).toBe("discarded")
-    expect(rerun?.history[0]?.discardReason).toMatch(/^Conflicted with main in site\/index\.html after ".+" shipped\.$/)
+    expect(rerun?.history[0]?.discardReason).toBe("Conflicted with main in site/index.html.")
+  })
+
+  it("places a partial review and a control-file change in review with the core policy", () => {
+    const board = boards.get("harbor/board-northline-notices-5e2b.json") as BoardView
+    const cards = board.lanes.flatMap((lane) => lane.tasks)
+    const partial = cards.find((task) => task.brief.task === "Add the tide table")
+    expect(partial?.current.digest?.satisfies).toBe("yes")
+    expect(partial?.current.review?.verdict).toBe("partial")
+    expect(partial?.lane).toBe("review")
+    expect(partial?.current.primary).toBe("ship-anyway")
+
+    const control = cards.find((task) => task.brief.task === "Tighten the footer copy")
+    expect(control?.current.review?.verdict).toBe("off-brief")
+    expect(control?.current.digest?.controlPaths).toEqual([".shipboard/review-notes.md"])
+    expect(control?.lane).toBe("review")
   })
 })

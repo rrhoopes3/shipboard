@@ -196,7 +196,7 @@
               "review": null,
               "replacedBy": "harbor-notes-3f2a--tint-the-pier-na-77de",
               "replaces": null,
-              "discardReason": "Conflicted with main in site/index.html after \"Rename the pier mark to the night board\" shipped.",
+              "discardReason": "Conflicted with main in site/index.html.",
               "shippedSha": null,
               "previewUrl": "/preview/harbor-notes-3f2a/harbor-notes-3f2a--tint-the-pier-na-3b1c/",
               "primary": "none",
@@ -514,7 +514,7 @@
     {
       "at": "2026-10-01T21:14:40.000Z",
       "kind": "rerun",
-      "text": "Re-ran \"Tint the pier name in channel teal\" as attempt 2 on main e6eaa84. Attempt 1 was discarded: Conflicted with main in site/index.html after \"Rename the pier mark to the night board\" shipped.",
+      "text": "Re-ran \"Tint the pier name in channel teal\" as attempt 2 on main e6eaa84. Attempt 1 was discarded: Conflicted with main in site/index.html.",
       "briefId": "tint-the-pier-name-i-9c01",
       "attemptId": "harbor-notes-3f2a--tint-the-pier-na-77de",
       "agent": "demo"

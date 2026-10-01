@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest"
-import { PUSHED, PushWorkflow, handlePush, parsePushEvent, parsePushEvents, retryable } from "../../src/cloudflare/push-workflow.ts"
+import { PUSHED, PushWorkflow, handlePush, parsePushEvent, retryable } from "../../src/cloudflare/push-workflow.ts"
 import type { Envelope } from "../../src/cloudflare/rpc.ts"
 
 const after = "def789aa012def789aa012def789aa012def7aaa"
 const before = "abc123def456abc123def456abc123def456abc1"
 const repo = "harbor-notes-3f2a--tint-the-pier-n-77de"
 
-/** The documented `cf.artifacts.repo.pushed` CloudEvent. */
+/** Synthetic example of the documented event shape, NOT a captured live event.
+ * https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/#pushed
+ * A real Workflow input still needs to be captured after account login; see docs/DEPLOY.md.
+ */
 function cloudEvent(overrides: Record<string, unknown> = {}, payload: Record<string, unknown> = {}) {
   return {
     type: PUSHED,
@@ -25,28 +28,38 @@ function cloudEvent(overrides: Record<string, unknown> = {}, payload: Record<str
   }
 }
 
-const expected = { repo, ref: "refs/heads/main", after, before, namespace: "shipboard" }
+const expected = { repo, ref: "refs/heads/main", after, namespace: "shipboard" }
 
 describe("parsePushEvent", () => {
-  it("reads the CloudEvent however the trigger wraps it", () => {
+  it("reads one event with the documented source and payload fields", () => {
     expect(parsePushEvent(cloudEvent())).toEqual(expected)
-    expect(parsePushEvent({ payload: cloudEvent() })).toEqual(expected)
-    expect(parsePushEvent({ body: JSON.stringify(cloudEvent()) })).toEqual(expected)
-    expect(parsePushEvent({ body: cloudEvent() })).toEqual(expected)
-    expect(parsePushEvent(JSON.stringify(cloudEvent()))).toEqual(expected)
-    expect(parsePushEvent({ payload: { body: JSON.stringify(cloudEvent()) } })).toEqual(expected)
-    expect(parsePushEvent({ type: "workflow", payload: cloudEvent() })).toEqual(expected)
   })
 
-  it("accepts a bare payload that names its repo, and snake_case source keys", () => {
-    expect(parsePushEvent({ repoName: repo, ref: "refs/heads/main", before, after })).toEqual({ ...expected, namespace: null })
-    expect(parsePushEvent(cloudEvent({ source: { type: "artifacts.repo", namespace: "shipboard", repo_name: repo } }))).toEqual(expected)
-    expect(parsePushEvent({ ...cloudEvent(), payload: JSON.stringify(cloudEvent().payload) })).toEqual(expected)
-    expect(parsePushEvent(cloudEvent({}, { after: after.toUpperCase() }))?.after).toBe(after)
+  it("rejects speculative wrappers, aliases, JSON strings and batches", () => {
+    for (const input of [
+      JSON.stringify(cloudEvent()),
+      { payload: cloudEvent() },
+      { body: cloudEvent() },
+      { event: cloudEvent() },
+      { data: cloudEvent() },
+      { body: JSON.stringify(cloudEvent()) },
+      { payload: { body: cloudEvent() } },
+      { repoName: repo, namespace: "shipboard", ref: "refs/heads/main", before, after },
+      cloudEvent({ source: { namespace: "shipboard", repo_name: repo } }),
+      cloudEvent({ source: { namespace: "shipboard", repo } }),
+      cloudEvent({ payload: JSON.stringify(cloudEvent().payload) }),
+      [cloudEvent()],
+      { events: [cloudEvent()] },
+      { messages: [cloudEvent()] },
+      { payload: [cloudEvent()] },
+    ]) expect(parsePushEvent(input)).toBeNull()
   })
 
   it("ignores other events, deleted refs, missing repos and junk", () => {
     expect(parsePushEvent(cloudEvent({ type: "cf.artifacts.repo.forked" }))).toBeNull()
+    expect(parsePushEvent(cloudEvent({ type: undefined }))).toBeNull()
+    expect(parsePushEvent(cloudEvent({ source: { repoName: repo } }))).toBeNull()
+    expect(parsePushEvent(cloudEvent({ source: { namespace: "", repoName: repo } }))).toBeNull()
     expect(parsePushEvent(cloudEvent({}, { after: "0".repeat(40) }))).toBeNull()
     expect(parsePushEvent(cloudEvent({}, { after: "nope" }))).toBeNull()
     expect(parsePushEvent(cloudEvent({}, { ref: "main" }))).toBeNull()
@@ -59,19 +72,7 @@ describe("parsePushEvent", () => {
     expect(parsePushEvent([cloudEvent()])).toBeNull()
   })
 
-  it("reads a batch of events, dropping the ones that are not pushes", () => {
-    const other = cloudEvent({ source: { type: "artifacts.repo", namespace: "shipboard", repoName: "harbor-notes-3f2a" } })
-    expect(parsePushEvents([cloudEvent(), other])).toHaveLength(2)
-    expect(parsePushEvents({ events: [cloudEvent(), { type: "cf.artifacts.repo.forked" }] })).toEqual([expected])
-    expect(parsePushEvents({ messages: [{ body: JSON.stringify(cloudEvent()) }] })).toEqual([expected])
-    expect(parsePushEvents(cloudEvent())).toEqual([expected])
-    expect(parsePushEvents({ nothing: true })).toEqual([])
-  })
 
-  it("keeps a malformed before out of the result", () => {
-    expect(parsePushEvent(cloudEvent({}, { before: "0".repeat(40) }))?.before).toBe("0".repeat(40))
-    expect(parsePushEvent(cloudEvent({}, { before: "x" }))?.before).toBeNull()
-  })
 })
 
 type PushCall = { repo: string; ref: string; after: string }
@@ -146,16 +147,6 @@ describe("handlePush", () => {
     expect(retryable(429)).toBe(true)
     expect(retryable(400)).toBe(false)
     expect(retryable(404)).toBe(false)
-  })
-
-  it("handles each push of a batch in its own step", async () => {
-    const { ns, calls } = fakeProjects(() => ({ ok: true, value: undefined }))
-    const step = fakeStep()
-    const main = cloudEvent({ source: { type: "artifacts.repo", namespace: "shipboard", repoName: "harbor-notes-3f2a" } })
-    const out = await handlePush({ PROJECT: ns }, [cloudEvent(), main], step as never)
-    expect(out).toMatchObject({ batch: [{ done: true, repo }, { done: true, repo: "harbor-notes-3f2a" }] })
-    expect(step.steps.map((s) => s.name)).toEqual([`assess ${repo} at ${after.slice(0, 12)}`, `assess harbor-notes-3f2a at ${after.slice(0, 12)}`])
-    expect(calls).toHaveLength(2)
   })
 
   it("runs as the Workflow entrypoint on event.payload", async () => {

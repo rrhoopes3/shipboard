@@ -115,6 +115,29 @@ npx wrangler workflows instances list shipboard-push      # one instance per pus
 npx wrangler artifacts repos list --namespace shipboard   # the project repo and one repo per attempt
 ```
 
+### Evidence still needed before submission
+
+The parser accepts the [documented push event](https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/#pushed):
+`type: "cf.artifacts.repo.pushed"`, `source.namespace`, `source.repoName`, `payload.ref`, and
+`payload.after`. The example in `test/cloudflare/push-workflow.test.ts` is synthetic. It is not
+evidence that a deployed trigger delivered that body. On 2026-10-01, `npx wrangler whoami`
+reported no authenticated account, so live verification remains pending.
+
+After login, use the separate dev board below to verify the integration:
+
+1. Push a commit to a dev attempt fork and find the resulting `shipboard-dev-push` Workflow
+   instance. Do not manually create the instance: the Artifacts trigger must start it.
+2. Save its actual input from the Workflows dashboard as a JSON fixture under
+   `test/cloudflare/fixtures/`, with the capture date and instance ID in a companion note.
+   Redact account and subscription identifiers and any personal commit metadata, recording the
+   redactions. Keep the event nesting and routing fields intact. Add an entrypoint regression
+   using that captured input.
+3. Check the instance's assessment step and resulting attempt head, digest, and lane. Board
+   refresh also reconciles pushes, so seeing a ready card alone does not prove trigger delivery.
+   Inspect the instance with `npx wrangler workflows instances describe shipboard-dev-push <id> --env dev --json`.
+4. Record the deployed URL and the observed dispatch, push, ship, conflict, and re-run results
+   here. Until then, the dry run and local tests establish build and local behavior only.
+
 ## 6. Run agents against the deployed board
 
 On the machine where your agent CLIs are installed and logged in:

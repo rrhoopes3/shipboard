@@ -74,6 +74,18 @@ describe("lanes and the one button", () => {
     expect(
       placement(attempt({ review: { verdict: "off-brief", note: "", model: "m", headSha: sha("c"), at: "" } })),
     ).toEqual(review)
+    expect(
+      placement(attempt({ review: { verdict: "partial", note: "One check needs a person.", model: "m", headSha: sha("c"), at: "" } })),
+    ).toEqual(review)
+    expect(
+      placement(attempt({ review: { verdict: "satisfies", note: "Complete.", model: "m", headSha: sha("c"), at: "" } })),
+    ).toEqual({ lane: "ship", primary: "ship", secondary: ["park", "rerun"] })
+    // An old review is about the old head, even if it used to say partial or off-brief.
+    for (const verdict of ["partial", "off-brief"] as const) {
+      expect(placement(attempt({ review: { verdict, note: "Old head.", model: "m", headSha: sha("d"), at: "" } }))).toEqual({
+        lane: "ship", primary: "ship", secondary: ["park", "rerun"],
+      })
+    }
     expect(placement(attempt({ status: "waiting", digest: null, merge: null }))).toEqual({
       lane: "working",
       primary: "wait",
@@ -84,6 +96,7 @@ describe("lanes and the one button", () => {
     expect(placement(attempt({ status: "discarded" }))).toEqual({ lane: null, primary: "none", secondary: [] })
     // A conflict wins over a failing digest.
     expect(placement(attempt({ merge: merge("conflict"), digest: digest({ satisfies: "no" }) })).lane).toBe("rerun")
+    expect(placement(attempt({ merge: merge("conflict"), review: { verdict: "partial", note: "", model: "m", headSha: sha("c"), at: "" } })).lane).toBe("rerun")
   })
 
   it("orders lanes rerun, ship, review, working, parked, shipped", () => {

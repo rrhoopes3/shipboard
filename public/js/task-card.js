@@ -24,6 +24,10 @@ function pushedAt(a) {
   return a.digest ? a.merge?.checkedAt ?? a.updatedAt : a.updatedAt
 }
 
+function currentReview(a) {
+  return a.review && a.review.headSha === a.headSha ? a.review : null
+}
+
 const isWaiting = (a) => a.status === "waiting" || (a.status === "ready" && !a.merge && !a.digest)
 
 /** The newest shipped activity at or before `at`, for the main timeline. */
@@ -275,7 +279,7 @@ function currentNode(task, ctx) {
   if (a.merge && a.merge.state === "conflict") node.append(conflictBox(a, ctx))
   const notes = noteItems(d)
   if (notes.length) node.append(h("ul", { class: "notes" }, notes.map((n) => h("li", { "data-tone": n.tone }, icon(n.icon), n.text))))
-  if (a.review) node.append(reviewBlock(a.review))
+  if (currentReview(a)) node.append(reviewBlock(a.review))
   return node
 }
 
@@ -512,18 +516,21 @@ function primaryArea(task, ctx) {
   }
 }
 
-function shipAnywayWhy(a) {
+export function shipAnywayWhy(a) {
   const d = a.digest
+  const review = currentReview(a)
   if (d && d.controlPaths.length) return `It changes ${listPhrase(d.controlPaths)} under .shipboard/. Read the diff before you ship it.`
   if (d && d.unexpectedPaths.length) return `${listPhrase(d.unexpectedPaths)} ${d.unexpectedPaths.length === 1 ? "is" : "are"} outside the brief. Shipping is still your call.`
   if (d && d.checks.some((c) => !c.ok)) return "An acceptance check failed. Shipping is still your call."
-  if (a.review && a.review.verdict === "off-brief") return `The review reads it as off brief: ${a.review.note.replace(/\.$/, "")}. Shipping is still your call.`
+  if (review?.verdict === "off-brief") return `The review reads it as off brief: ${review.note.replace(/\.$/, "")}. Shipping is still your call.`
+  if (review?.verdict === "partial") return `The review only partly confirms the brief: ${review.note.replace(/\.$/, "")}. Shipping is still your call.`
   if (d && d.missedPaths.length) return `It did not touch ${listPhrase(d.missedPaths)}. Shipping is still your call.`
   return "The digest could not confirm the brief. Shipping is still your call."
 }
 
 function confirmBox(task, ctx) {
   const { brief, current: a } = task
+  const review = currentReview(a)
   const c = ctx.confirm
   let text
   let yes
@@ -531,8 +538,10 @@ function confirmBox(task, ctx) {
     const d = a.digest
     text = d && d.unexpectedPaths.length
       ? `Ship it with ${listPhrase(d.unexpectedPaths)} outside the brief?`
-      : a.review && a.review.verdict === "off-brief"
+      : review?.verdict === "off-brief"
         ? "Ship it although the review reads it as off brief?"
+        : review?.verdict === "partial"
+          ? "Ship it although the review only partly confirms the brief?"
         : "Ship it although the digest could not confirm the brief?"
     yes = { label: "Yes, ship it", iconName: "ship" }
   } else {

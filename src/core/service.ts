@@ -9,13 +9,12 @@
 
 import { DEMO_AGENT, agentKind, agentLabel, findAgent } from "./agents.ts"
 import { briefBytes, briefFile, bytesEqual, makeBrief, validateDispatch } from "./brief.ts"
-import { DEMO_AUTHOR, demoEdit } from "./demo.ts"
+import { runDemoEdit, supportsDemo } from "./demo.ts"
 import { buildDigest, parseChecks } from "./digest.ts"
 import { GitWorkspace } from "./git.ts"
 import { validateCreateProject, validateOutcome } from "./inputs.ts"
 import { Mutex } from "./mutex.ts"
 import {
-  assertSafeRel,
   briefPath,
   isAttemptId,
   listPhrase,
@@ -27,6 +26,7 @@ import {
 } from "./names.ts"
 import { PortError } from "./ports.ts"
 import type { Clock, CorePorts, Logger, ProjectHandle, ProjectServiceOptions } from "./ports.ts"
+import { readPreview } from "./preview.ts"
 import { HARBOR_BRIEFS, harborFiles, starterFiles } from "./seeds.ts"
 import {
   LEASE_MS,
@@ -55,7 +55,7 @@ import type {
   ProjectState,
   ProjectSummary,
 } from "./types.ts"
-import { boardView, contentTypeFor, projectSummary } from "./views.ts"
+import { boardView, projectSummary } from "./views.ts"
 
 export { validateCreateProject, validateOutcome } from "./inputs.ts"
 
@@ -140,24 +140,7 @@ export class ProjectService implements ProjectHandle {
       repo = attempt.repo
       sha = attempt.headSha
     }
-    const rel = path.replace(/^\/+/, "")
-    const candidates: string[] = []
-    if (!rel) candidates.push("index.html")
-    else {
-      let safe: string
-      try {
-        safe = assertSafeRel(rel, { allowDir: true, allowSpaces: true })
-      } catch {
-        return null
-      }
-      if (safe.endsWith("/")) candidates.push(`${safe}index.html`)
-      else candidates.push(safe, `${safe}/index.html`)
-    }
-    for (const candidate of candidates) {
-      const body = await this.ports.artifacts.readFile(repo, sha, candidate)
-      if (body) return { body, contentType: contentTypeFor(candidate) }
-    }
-    return null
+    return readPreview(this.ports.artifacts, repo, sha, path)
   }
 
   /** queuedAt of the oldest job a runner offering `agents` could claim here, or null. */
@@ -310,13 +293,7 @@ export class ProjectService implements ProjectHandle {
       this.dropQueuedJob(tx.state, old.id)
       this.cancelRunningJob(tx.state, old.id, `Discarded for a re-run: ${reason}`)
       this.queueJob(tx, fresh)
-      this.activity(tx.state, {
-        kind: "rerun",
-        text: `Re-ran "${oneLine(brief.task, 80)}" as attempt ${fresh.number} on main ${shortSha(fresh.baseSha)}. Attempt ${old.number} was discarded: ${reason}`,
-        briefId: brief.id,
-        attemptId: fresh.id,
-        agent: agentId,
-      })
+      this.attemptActivity(tx.state, fresh, "rerun", `Re-ran "${oneLine(brief.task, 80)}" as attempt ${fresh.number} on main ${shortSha(fresh.baseSha)}. Attempt ${old.number} was discarded: ${reason}`)
       return fresh.id
     })
     return { board: await this.view(), attemptId: freshId }
@@ -326,14 +303,7 @@ export class ProjectService implements ProjectHandle {
 
   async pushed(attemptId: string, sha?: string): Promise<BoardView> {
     this.requireOwn(attemptId)
-    await this.write(async (tx) => {
-      const attempt = this.attemptOf(tx.state, attemptId)
-      if (attempt.status !== "waiting" && attempt.status !== "ready") return
-      if (sha && SHA.test(sha) && this.alreadySeen(attempt, sha)) return
-      const head = await this.ports.artifacts.head(attempt.repo)
-      if (!head || this.alreadySeen(attempt, head)) return
-      await this.assessAttempt(tx, attempt)
-    })
+    await this.write((tx) => this.noteHead(tx, this.attemptOf(tx.state, attemptId).repo, sha ?? ""))
     return this.view()
   }
 
@@ -344,19 +314,11 @@ export class ProjectService implements ProjectHandle {
     // there is any state. They are shipboard's own and need no assessment.
     try {
       await this.load()
-    } catch {
-      return
+    } catch (err) {
+      if (err instanceof PortError && err.status === 404) return
+      throw err
     }
-    await this.write(async (tx) => {
-      if (event.repo === tx.state.project.repo) {
-        if (event.after !== tx.state.project.mainSha) await this.mainMoved(tx)
-        return
-      }
-      const attempt = tx.state.attempts.find((item) => item.repo === event.repo)
-      if (!attempt || (attempt.status !== "waiting" && attempt.status !== "ready")) return
-      if (this.alreadySeen(attempt, event.after)) return
-      await this.assessAttempt(tx, attempt)
-    })
+    await this.write((tx) => this.noteHead(tx, event.repo, event.after))
   }
 
   // ------------------------------------------------------------------ ship, park, unpark
@@ -384,7 +346,7 @@ export class ProjectService implements ProjectHandle {
       })
       const now = this.now()
       if (result.kind === "moved") {
-        if (result.headSha !== attempt.headSha) await this.assessAttempt(tx, attempt)
+        await this.noteHead(tx, attempt.repo, result.headSha)
         await this.checkpoint(tx)
         throw new PortError(
           `The fork is at ${shortSha(result.headSha)}, not the head you were shown. Check the new digest, then ship.`,
@@ -409,13 +371,7 @@ export class ProjectService implements ProjectHandle {
       attempt.updatedAt = now
       tx.state.project.mainSha = result.mainSha
       this.dropQueuedJob(tx.state, attempt.id)
-      this.activity(tx.state, {
-        kind: "shipped",
-        text: `Shipped "${oneLine(brief.task, 80)}" to main at ${shortSha(result.mainSha)}.`,
-        briefId: brief.id,
-        attemptId: attempt.id,
-        agent: attempt.agent,
-      })
+      this.attemptActivity(tx.state, attempt, "shipped", `Shipped "${oneLine(brief.task, 80)}" to main at ${shortSha(result.mainSha)}.`)
       // Main moved for real. Persist before re-checking the others, so a failure there cannot lose the ship.
       await this.checkpoint(tx)
       await this.retrialOthers(tx, attempt.id)
@@ -435,13 +391,7 @@ export class ProjectService implements ProjectHandle {
       attempt.updatedAt = this.now()
       this.dropQueuedJob(tx.state, attempt.id)
       this.cancelRunningJob(tx.state, attempt.id, "A human parked the attempt.")
-      this.activity(tx.state, {
-        kind: "parked",
-        text: `Parked "${oneLine(brief.task, 80)}".`,
-        briefId: brief.id,
-        attemptId: attempt.id,
-        agent: attempt.agent,
-      })
+      this.attemptActivity(tx.state, attempt, "parked", `Parked "${oneLine(brief.task, 80)}".`)
     })
     return this.view()
   }
@@ -456,13 +406,7 @@ export class ProjectService implements ProjectHandle {
       attempt.updatedAt = this.now()
       await this.assessAttempt(tx, attempt, { force: true })
       if (attempt.status === "waiting") this.queueJob(tx, attempt)
-      this.activity(tx.state, {
-        kind: "unparked",
-        text: `Put "${oneLine(brief.task, 80)}" back on the board.`,
-        briefId: brief.id,
-        attemptId: attempt.id,
-        agent: attempt.agent,
-      })
+      this.attemptActivity(tx.state, attempt, "unparked", `Put "${oneLine(brief.task, 80)}" back on the board.`)
     })
     return this.view()
   }
@@ -492,13 +436,7 @@ export class ProjectService implements ProjectHandle {
       job.runnerId = runnerId
       job.claimedAt = now.toISOString()
       job.leaseExpiresAt = new Date(now.getTime() + LEASE_MS).toISOString()
-      this.activity(tx.state, {
-        kind: "claimed",
-        text: `Runner ${runnerId} claimed "${oneLine(brief.task, 80)}" for ${agentLabel(this.options.agents, job.agent)}.`,
-        briefId: brief.id,
-        attemptId: attempt.id,
-        agent: job.agent,
-      })
+      this.attemptActivity(tx.state, attempt, "claimed", `Runner ${runnerId} claimed "${oneLine(brief.task, 80)}" for ${agentLabel(this.options.agents, job.agent)}.`)
       const claimed: ClaimedJob = {
         attemptId: attempt.id,
         projectId: this.projectId,
@@ -547,43 +485,18 @@ export class ProjectService implements ProjectHandle {
       const now = this.now()
       job.finishedAt = now
       job.outcome = clean
-      const live = attempt.status === "waiting" || attempt.status === "ready"
       if (clean.reason === "pushed") {
         job.state = "done"
-        if (live) {
-          const head = await this.ports.artifacts.head(attempt.repo)
-          // Usually the push was already seen through `pushed` or a push event.
-          if (head && !this.alreadySeen(attempt, head)) await this.assessAttempt(tx, attempt)
-          if (attempt.status === "waiting") {
-            attempt.status = "failed"
-            attempt.updatedAt = now
-            this.activity(tx.state, {
-              kind: "failed",
-              text: `${agentLabel(this.options.agents, job.agent)} reported a push for "${oneLine(brief.task, 80)}", but the fork has nothing new.`,
-              briefId: brief.id,
-              attemptId: attempt.id,
-              agent: job.agent,
-            })
-          }
-        }
-        return
+      } else {
+        job.state = "failed"
+        this.attemptActivity(tx.state, attempt, "failed", `${agentLabel(this.options.agents, job.agent)} did not finish "${oneLine(brief.task, 80)}" (${clean.reason})${clean.summary ? `: ${oneLine(clean.summary, 200)}` : "."}`)
       }
-      job.state = "failed"
-      this.activity(tx.state, {
-        kind: "failed",
-        text: `${agentLabel(this.options.agents, job.agent)} did not finish "${oneLine(brief.task, 80)}" (${clean.reason})${clean.summary ? `: ${oneLine(clean.summary, 200)}` : "."}`,
-        briefId: brief.id,
-        attemptId: attempt.id,
-        agent: job.agent,
-      })
-      if (!live) return
-      const head = await this.ports.artifacts.head(attempt.repo)
-      if (head && !this.alreadySeen(attempt, head)) {
-        // It pushed something before giving up; that is still worth a look.
-        await this.assessAttempt(tx, attempt)
-      } else if (attempt.status === "waiting") {
+      // A runner may finish before its push event, including after it reports an error.
+      await this.noteHead(tx, attempt.repo, clean.reason === "pushed" ? clean.commitSha ?? "" : "")
+      if (attempt.status === "waiting") {
         attempt.status = "failed"
         attempt.updatedAt = now
+        if (clean.reason === "pushed") this.attemptActivity(tx.state, attempt, "failed", `${agentLabel(this.options.agents, job.agent)} reported a push for "${oneLine(brief.task, 80)}", but the fork has nothing new.`)
       }
     })
     return this.view()
@@ -623,13 +536,7 @@ export class ProjectService implements ProjectHandle {
             attempt.status = "failed"
             attempt.updatedAt = new Date(now).toISOString()
           }
-          this.activity(tx.state, {
-            kind: "failed",
-            text: `Gave up on "${task}" after the runner lease expired ${requeues + 1} times (lease_expired).`,
-            briefId: attempt?.briefId,
-            attemptId: job.attemptId,
-            agent: job.agent,
-          })
+          this.jobFailureActivity(tx.state, job, attempt, `Gave up on "${task}" after the runner lease expired ${requeues + 1} times (lease_expired).`)
           continue
         }
         const runner = job.runnerId ?? "a runner"
@@ -638,14 +545,7 @@ export class ProjectService implements ProjectHandle {
         delete job.runnerId
         delete job.claimedAt
         delete job.leaseExpiresAt
-        this.activity(tx.state, {
-          kind: "failed",
-          text: `The lease ${runner} held on "${task}" expired (lease_expired). Queued it again (${requeues + 1} of ${MAX_REQUEUES}).`,
-          briefId: attempt?.briefId,
-          attemptId: job.attemptId,
-          agent: job.agent,
-        })
-        if (agentKind(this.options.agents, job.agent) === "demo") this.queueDemo(tx)
+        this.jobFailureActivity(tx.state, job, attempt, `The lease ${runner} held on "${task}" expired (lease_expired). Queued it again (${requeues + 1} of ${MAX_REQUEUES}).`)
       }
       if (now - tx.state.reconciledAt >= RECONCILE_MS) await this.reconcile(tx)
       if (tx.state.jobs.some((job) => job.state === "queued" && agentKind(this.options.agents, job.agent) === "demo")) {
@@ -776,10 +676,40 @@ export class ProjectService implements ProjectHandle {
     pushActivity(state, entry, this.now())
   }
 
+  private attemptActivity(state: ProjectState, attempt: Attempt, kind: Activity["kind"], text: string): void {
+    this.activity(state, { kind, text, briefId: attempt.briefId, attemptId: attempt.id, agent: attempt.agent })
+  }
+
+  private jobFailureActivity(state: ProjectState, job: Job, attempt: Attempt | undefined, text: string): void {
+    this.activity(state, { kind: "failed", text, briefId: attempt?.briefId, attemptId: job.attemptId, agent: job.agent })
+  }
+
   /** A seen head: the brief commit itself, or a head that already has a digest. */
   private alreadySeen(attempt: Attempt, sha: string): boolean {
-    if (sha === attempt.briefSha && attempt.status === "waiting") return true
-    return sha === attempt.headSha && attempt.digest !== null && attempt.digest.headSha === sha
+    return (sha === attempt.briefSha && attempt.status === "waiting") ||
+      (sha === attempt.headSha && attempt.digest !== null && attempt.digest.headSha === sha)
+  }
+
+  private live(attempt: Attempt): boolean {
+    return attempt.status === "waiting" || attempt.status === "ready"
+  }
+
+  /** All observed heads enter here; assess fetches the current head if an event arrives late. */
+  private async noteHead(tx: Tx, repo: string, sha: string): Promise<void> {
+    if (repo === tx.state.project.repo) {
+      if (sha === tx.state.project.mainSha) return
+      const head = await this.git().head(repo)
+      if (!head || head === tx.state.project.mainSha) return
+      tx.state.project.mainSha = head
+      this.activity(tx.state, { kind: "project", text: `Main moved to ${shortSha(head)} outside shipboard.` })
+      await this.retrialOthers(tx, null)
+      return
+    }
+    const attempt = tx.state.attempts.find((item) => item.repo === repo)
+    if (!attempt || !this.live(attempt)) return
+    const head = await this.ports.artifacts.head(repo)
+    if (!head || this.alreadySeen(attempt, head)) return
+    await this.assessAttempt(tx, attempt)
   }
 
   private checkAgent(raw: string, brief: Brief): string {
@@ -787,7 +717,7 @@ export class ProjectService implements ProjectHandle {
     if (!findAgent(this.options.agents, id)) {
       throw new PortError(`There is no agent called "${id.slice(0, 40)}". Pick one from the list.`, 400)
     }
-    if (agentKind(this.options.agents, id) === "demo" && !demoEdit(brief.demo)) {
+    if (agentKind(this.options.agents, id) === "demo" && !supportsDemo(brief.demo)) {
       throw new PortError("The demo agent only runs the harbor demo briefs. Pick a real agent.", 400)
     }
     return id
@@ -821,13 +751,7 @@ export class ProjectService implements ProjectHandle {
     tx.state.briefs.push(brief)
     tx.state.attempts.push(attempt)
     this.queueJob(tx, attempt)
-    this.activity(tx.state, {
-      kind: "dispatched",
-      text: `Dispatched "${oneLine(brief.task, 80)}" to ${agentLabel(this.options.agents, agent)}.`,
-      briefId: brief.id,
-      attemptId: attempt.id,
-      agent,
-    })
+    this.attemptActivity(tx.state, attempt, "dispatched", `Dispatched "${oneLine(brief.task, 80)}" to ${agentLabel(this.options.agents, agent)}.`)
     return { attempt, credentials }
   }
 
@@ -910,13 +834,7 @@ export class ProjectService implements ProjectHandle {
       attempt.updatedAt = now
     }
     const brief = this.briefOf(tx.state, attempt)
-    this.activity(tx.state, {
-      kind: "failed",
-      text: `${agentLabel(this.options.agents, job.agent)} did not finish "${oneLine(brief.task, 80)}" (${outcome.reason}): ${outcome.summary}`,
-      briefId: brief.id,
-      attemptId: attempt.id,
-      agent: job.agent,
-    })
+    this.attemptActivity(tx.state, attempt, "failed", `${agentLabel(this.options.agents, job.agent)} did not finish "${oneLine(brief.task, 80)}" (${outcome.reason}): ${outcome.summary}`)
   }
 
   private async runDemoJob(tx: Tx, job: Job): Promise<void> {
@@ -927,48 +845,22 @@ export class ProjectService implements ProjectHandle {
     job.runnerId = "demo"
     job.claimedAt = now.toISOString()
     job.leaseExpiresAt = new Date(now.getTime() + LEASE_MS).toISOString()
-    const edit = demoEdit(brief.demo)
     if (attempt.status !== "waiting") {
       job.state = "done"
       job.finishedAt = this.now()
       job.outcome = { reason: "no_changes", summary: `The attempt was ${attempt.status} before the demo ran.` }
       return
     }
-    if (!edit) {
-      this.failJob(tx, job, attempt, { reason: "agent_error", summary: "The demo agent only knows the harbor demo briefs." })
-      return
-    }
-    let commitSha: string
-    try {
-      const git = this.git()
-      const head = await git.head(attempt.repo)
-      if (!head) throw new PortError("The fork has no main branch.", 409)
-      const current = await git.readAt(attempt.repo, head, edit.path)
-      if (!current) {
-        this.failJob(tx, job, attempt, { reason: "agent_error", summary: `${edit.path} is missing on this fork.` })
-        return
-      }
-      const next = edit.apply(new TextDecoder().decode(current))
-      const commit = await git.commit(
-        attempt.repo,
-        { [edit.path]: next },
-        `${oneLine(brief.task)}\n\nShipboard-Attempt: ${attempt.id}\nShipboard-Agent: ${DEMO_AGENT}`,
-        { author: DEMO_AUTHOR, parent: head },
-      )
-      if (!commit.changed) {
-        this.failJob(tx, job, attempt, { reason: "no_changes", summary: `The scripted edit left ${edit.path} unchanged.` })
-        return
-      }
-      commitSha = commit.sha
-    } catch (err) {
-      this.failJob(tx, job, attempt, { reason: "agent_error", summary: oneLine(err instanceof Error ? err.message : String(err), 300) })
+    const result = await runDemoEdit(this.git(), attempt.repo, attempt.id, brief)
+    if (!result.ok) {
+      this.failJob(tx, job, attempt, { reason: result.reason, summary: result.summary })
       return
     }
     job.state = "done"
     job.finishedAt = this.now()
-    job.outcome = { reason: "pushed", summary: `Edited ${edit.path}.`, commitSha, changedPaths: [edit.path] }
+    job.outcome = { reason: "pushed", summary: `Edited ${result.path}.`, commitSha: result.sha, changedPaths: [result.path] }
     try {
-      await this.assessAttempt(tx, attempt)
+      await this.noteHead(tx, attempt.repo, result.sha)
     } catch (err) {
       // The push landed; reconcile will assess it later.
       this.log.warn("assess after demo push failed", { attempt: attempt.id, error: String(err) })
@@ -1003,13 +895,7 @@ export class ProjectService implements ProjectHandle {
     const wasConflict = attempt.merge?.state === "conflict"
     if (attempt.status === "waiting") attempt.status = "ready"
     if (newHead) {
-      this.activity(tx.state, {
-        kind: "pushed",
-        text: `${agentLabel(this.options.agents, attempt.agent)} pushed ${shortSha(result.headSha)} for "${oneLine(brief.task, 80)}".`,
-        briefId: brief.id,
-        attemptId: attempt.id,
-        agent: attempt.agent,
-      })
+      this.attemptActivity(tx.state, attempt, "pushed", `${agentLabel(this.options.agents, attempt.agent)} pushed ${shortSha(result.headSha)} for "${oneLine(brief.task, 80)}".`)
     }
     attempt.headSha = result.headSha
     attempt.digest = buildDigest({
@@ -1026,13 +912,7 @@ export class ProjectService implements ProjectHandle {
     if (attempt.merge.state === "conflict") {
       if (newHead || !wasConflict || opts.force) this.conflictActivity(tx.state, attempt, brief)
     } else if (newHead || opts.force) {
-      this.activity(tx.state, {
-        kind: "assessed",
-        text: `Assessed "${oneLine(brief.task, 80)}": ${attempt.digest.summary}`,
-        briefId: brief.id,
-        attemptId: attempt.id,
-        agent: attempt.agent,
-      })
+      this.attemptActivity(tx.state, attempt, "assessed", `Assessed "${oneLine(brief.task, 80)}": ${attempt.digest.summary}`)
     }
     if (mainMoved) await this.retrialOthers(tx, attempt.id)
   }
@@ -1056,13 +936,7 @@ export class ProjectService implements ProjectHandle {
 
   private conflictActivity(state: ProjectState, attempt: Attempt, brief: Brief): void {
     const paths = attempt.merge?.paths ?? []
-    this.activity(state, {
-      kind: "conflict",
-      text: `"${oneLine(brief.task, 80)}" conflicts with main${paths.length ? ` in ${listPhrase(paths)}` : ""}. Re-run it on current main.`,
-      briefId: brief.id,
-      attemptId: attempt.id,
-      agent: attempt.agent,
-    })
+    this.attemptActivity(state, attempt, "conflict", `"${oneLine(brief.task, 80)}" conflicts with main${paths.length ? ` in ${listPhrase(paths)}` : ""}. Re-run it on current main.`)
   }
 
   /** Re-runs trial merges for every other ready attempt after main moved. One bad fork cannot fail the rest. */
@@ -1072,7 +946,7 @@ export class ProjectService implements ProjectHandle {
       try {
         const merge = await this.git().trialMerge(tx.state.project.repo, other.repo)
         if (merge.headSha !== other.headSha) {
-          await this.assessAttempt(tx, other)
+          await this.noteHead(tx, other.repo, merge.headSha)
           continue
         }
         const wasConflict = other.merge?.state === "conflict"
@@ -1090,29 +964,17 @@ export class ProjectService implements ProjectHandle {
     }
   }
 
-  /** Main moved without shipboard shipping (a direct push). Fetch the real head and re-check. */
-  private async mainMoved(tx: Tx): Promise<void> {
-    const head = await this.git().head(tx.state.project.repo)
-    if (!head || head === tx.state.project.mainSha) return
-    tx.state.project.mainSha = head
-    this.activity(tx.state, { kind: "project", text: `Main moved to ${shortSha(head)} outside shipboard.` })
-    await this.retrialOthers(tx, null)
-  }
-
   private async reconcile(tx: Tx): Promise<void> {
     tx.state.reconciledAt = this.clock.now().getTime()
     try {
       const main = await this.ports.artifacts.head(tx.state.project.repo)
-      if (main && main !== tx.state.project.mainSha) await this.mainMoved(tx)
+      if (main) await this.noteHead(tx, tx.state.project.repo, main)
     } catch (err) {
       this.log.warn("reconcile main failed", { project: this.projectId, error: String(err) })
     }
     for (const attempt of tx.state.attempts) {
-      if (attempt.status !== "waiting" && attempt.status !== "ready") continue
       try {
-        const head = await this.ports.artifacts.head(attempt.repo)
-        if (!head || this.alreadySeen(attempt, head)) continue
-        await this.assessAttempt(tx, attempt)
+        await this.noteHead(tx, attempt.repo, "")
       } catch (err) {
         this.log.warn("reconcile attempt failed", { attempt: attempt.id, error: String(err) })
       }

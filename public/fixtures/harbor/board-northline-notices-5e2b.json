@@ -8,8 +8,8 @@
     "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
     "counts": {
       "rerun": 2,
-      "ship": 2,
-      "review": 1,
+      "ship": 1,
+      "review": 2,
       "working": 3,
       "parked": 1,
       "shipped": 2
@@ -372,13 +372,140 @@
               },
               "replacedBy": "northline-notices-5e2b--tint-the-pier-na-77de",
               "replaces": null,
-              "discardReason": "Conflicted with main in site/index.html after \"Rename the pier mark to the night board\" shipped.",
+              "discardReason": "Conflicted with main in site/index.html.",
               "shippedSha": null,
               "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--tint-the-pier-na-3b1c/",
               "primary": "none",
               "secondary": []
             }
           ]
+        }
+      ]
+    },
+    {
+      "lane": "review",
+      "tasks": [
+        {
+          "brief": {
+            "id": "tighten-the-footer-c-4e72",
+            "task": "Tighten the footer copy",
+            "constraints": [
+              "Keep the footer to one line",
+              "Do not touch the pier name"
+            ],
+            "acceptance": "contains site/index.html \"Posted nightly by the clerk.\"",
+            "paths": [
+              "site/index.html"
+            ],
+            "createdAt": "2026-10-01T21:10:15.000Z"
+          },
+          "lane": "review",
+          "current": {
+            "id": "northline-notices-5e2b--tighten-the-foot-c3d9",
+            "briefId": "tighten-the-footer-c-4e72",
+            "number": 1,
+            "agent": "grok",
+            "agentLabel": "Grok",
+            "agentKind": "cli",
+            "status": "ready",
+            "repo": "northline-notices-5e2b--tighten-the-foot-c3d9",
+            "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+            "briefSha": "c2c0c4328651b80999d7e84a9f598f775da8b17d",
+            "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+            "createdAt": "2026-10-01T21:10:15.000Z",
+            "updatedAt": "2026-10-01T21:12:07.000Z",
+            "job": {
+              "attemptId": "northline-notices-5e2b--tighten-the-foot-c3d9",
+              "agent": "grok",
+              "state": "done",
+              "queuedAt": "2026-10-01T21:10:15.000Z",
+              "runnerId": "harbor-vps-1",
+              "claimedAt": "2026-10-01T21:10:20.000Z",
+              "leaseExpiresAt": "2026-10-01T21:14:35.000Z",
+              "finishedAt": "2026-10-01T21:12:05.000Z",
+              "outcome": {
+                "reason": "pushed",
+                "summary": "Shortened the footer; also refreshed the README blurb.",
+                "commitSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+                "changedPaths": [
+                  ".shipboard/review-notes.md",
+                  "README.md",
+                  "site/index.html"
+                ]
+              },
+              "agentLabel": "Grok"
+            },
+            "digest": {
+              "summary": "Touched 3 files. Changed shipboard control files: .shipboard/review-notes.md.",
+              "satisfies": "no",
+              "reasons": [
+                "Touched 3 files.",
+                "Changed shipboard control files: .shipboard/review-notes.md.",
+                "Outside the brief: README.md."
+              ],
+              "files": [
+                {
+                  "path": ".shipboard/review-notes.md",
+                  "status": "added",
+                  "additions": 1,
+                  "deletions": 0
+                },
+                {
+                  "path": "README.md",
+                  "status": "modified",
+                  "additions": 2,
+                  "deletions": 1
+                },
+                {
+                  "path": "site/index.html",
+                  "status": "modified",
+                  "additions": 1,
+                  "deletions": 1
+                }
+              ],
+              "checks": [
+                {
+                  "path": "site/index.html",
+                  "text": "Posted nightly by the clerk.",
+                  "ok": true
+                }
+              ],
+              "unexpectedPaths": [
+                "README.md"
+              ],
+              "missedPaths": [],
+              "controlPaths": [
+                ".shipboard/review-notes.md"
+              ],
+              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+              "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658"
+            },
+            "merge": {
+              "state": "clean",
+              "paths": [],
+              "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
+              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+              "checkedAt": "2026-10-01T21:12:07.000Z"
+            },
+            "review": {
+              "verdict": "off-brief",
+              "note": "The README and a shipboard control file were changed without being requested.",
+              "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
+              "at": "2026-10-01T21:12:10.000Z"
+            },
+            "replacedBy": null,
+            "replaces": null,
+            "discardReason": null,
+            "shippedSha": null,
+            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--tighten-the-foot-c3d9/",
+            "primary": "ship-anyway",
+            "secondary": [
+              "park",
+              "rerun"
+            ]
+          },
+          "history": []
         },
         {
           "brief": {
@@ -394,7 +521,7 @@
             ],
             "createdAt": "2026-10-01T21:07:20.000Z"
           },
-          "lane": "ship",
+          "lane": "review",
           "current": {
             "id": "northline-notices-5e2b--add-the-tide-tab-9a51",
             "briefId": "add-the-tide-table-2b8c",
@@ -464,8 +591,8 @@
               "checkedAt": "2026-10-01T21:09:52.000Z"
             },
             "review": {
-              "verdict": "satisfies",
-              "note": "A static four-day table of high and low water. No scripts, no outside assets.",
+              "verdict": "partial",
+              "note": "The table is present, but the free-text reading guidance needs a human check.",
               "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
               "headSha": "aa467c8052dd79cf51bddc9d35510539530fbaeb",
               "at": "2026-10-01T21:09:55.000Z"
@@ -475,123 +602,6 @@
             "discardReason": null,
             "shippedSha": null,
             "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--add-the-tide-tab-9a51/",
-            "primary": "ship",
-            "secondary": [
-              "park",
-              "rerun"
-            ]
-          },
-          "history": []
-        }
-      ]
-    },
-    {
-      "lane": "review",
-      "tasks": [
-        {
-          "brief": {
-            "id": "tighten-the-footer-c-4e72",
-            "task": "Tighten the footer copy",
-            "constraints": [
-              "Keep the footer to one line",
-              "Do not touch the pier name"
-            ],
-            "acceptance": "contains site/index.html \"Posted nightly by the clerk.\"",
-            "paths": [
-              "site/index.html"
-            ],
-            "createdAt": "2026-10-01T21:10:15.000Z"
-          },
-          "lane": "review",
-          "current": {
-            "id": "northline-notices-5e2b--tighten-the-foot-c3d9",
-            "briefId": "tighten-the-footer-c-4e72",
-            "number": 1,
-            "agent": "grok",
-            "agentLabel": "Grok",
-            "agentKind": "cli",
-            "status": "ready",
-            "repo": "northline-notices-5e2b--tighten-the-foot-c3d9",
-            "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
-            "briefSha": "c2c0c4328651b80999d7e84a9f598f775da8b17d",
-            "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
-            "createdAt": "2026-10-01T21:10:15.000Z",
-            "updatedAt": "2026-10-01T21:12:07.000Z",
-            "job": {
-              "attemptId": "northline-notices-5e2b--tighten-the-foot-c3d9",
-              "agent": "grok",
-              "state": "done",
-              "queuedAt": "2026-10-01T21:10:15.000Z",
-              "runnerId": "harbor-vps-1",
-              "claimedAt": "2026-10-01T21:10:20.000Z",
-              "leaseExpiresAt": "2026-10-01T21:14:35.000Z",
-              "finishedAt": "2026-10-01T21:12:05.000Z",
-              "outcome": {
-                "reason": "pushed",
-                "summary": "Shortened the footer; also refreshed the README blurb.",
-                "commitSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
-                "changedPaths": [
-                  "README.md",
-                  "site/index.html"
-                ]
-              },
-              "agentLabel": "Grok"
-            },
-            "digest": {
-              "summary": "Touched README.md and site/index.html. Outside the brief: README.md.",
-              "satisfies": "no",
-              "reasons": [
-                "Touched README.md and site/index.html.",
-                "Outside the brief: README.md."
-              ],
-              "files": [
-                {
-                  "path": "README.md",
-                  "status": "modified",
-                  "additions": 2,
-                  "deletions": 1
-                },
-                {
-                  "path": "site/index.html",
-                  "status": "modified",
-                  "additions": 1,
-                  "deletions": 1
-                }
-              ],
-              "checks": [
-                {
-                  "path": "site/index.html",
-                  "text": "Posted nightly by the clerk.",
-                  "ok": true
-                }
-              ],
-              "unexpectedPaths": [
-                "README.md"
-              ],
-              "missedPaths": [],
-              "controlPaths": [],
-              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
-              "baseSha": "96849b060f608b7e29cfb918af2e6a0c7a772658"
-            },
-            "merge": {
-              "state": "clean",
-              "paths": [],
-              "mainSha": "96849b060f608b7e29cfb918af2e6a0c7a772658",
-              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
-              "checkedAt": "2026-10-01T21:12:07.000Z"
-            },
-            "review": {
-              "verdict": "partial",
-              "note": "The footer now reads in one line. The README edit was not asked for.",
-              "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-              "headSha": "5cf799bc55a6430ae0164e06cba357e9c3878674",
-              "at": "2026-10-01T21:12:10.000Z"
-            },
-            "replacedBy": null,
-            "replaces": null,
-            "discardReason": null,
-            "shippedSha": null,
-            "previewUrl": "/preview/northline-notices-5e2b/northline-notices-5e2b--tighten-the-foot-c3d9/",
             "primary": "ship-anyway",
             "secondary": [
               "park",
@@ -1360,7 +1370,7 @@
     {
       "at": "2026-10-01T21:12:07.000Z",
       "kind": "assessed",
-      "text": "Assessed \"Tighten the footer copy\": Touched README.md and site/index.html. Outside the brief: README.md.",
+      "text": "Assessed \"Tighten the footer copy\": Touched 3 files. Changed shipboard control files: .shipboard/review-notes.md.",
       "briefId": "tighten-the-footer-c-4e72",
       "attemptId": "northline-notices-5e2b--tighten-the-foot-c3d9",
       "agent": "grok"
@@ -1384,7 +1394,7 @@
     {
       "at": "2026-10-01T21:13:40.000Z",
       "kind": "rerun",
-      "text": "Re-ran \"Tint the pier name in channel teal\" as attempt 2 on main 96849b0. Attempt 1 was discarded: Conflicted with main in site/index.html after \"Rename the pier mark to the night board\" shipped.",
+      "text": "Re-ran \"Tint the pier name in channel teal\" as attempt 2 on main 96849b0. Attempt 1 was discarded: Conflicted with main in site/index.html.",
       "briefId": "tint-the-pier-name-i-9c01",
       "attemptId": "northline-notices-5e2b--tint-the-pier-na-77de",
       "agent": "claude"

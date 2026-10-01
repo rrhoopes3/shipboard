@@ -1,6 +1,6 @@
 /**
- * Builds public/fixtures/** (the UI's fixture mode, ?fixture=<name>) from one description of two
- * projects' timelines, so every board, diff and preview agrees with the others and with
+ * Builds public/fixtures/** (the UI's fixture mode, ?fixture=<name>) from project timelines,
+ * so every board, diff and preview agrees with the others and with
  * src/core/types.ts. Diffs are real unified diffs of real file contents, in core/git.ts's format.
  *
  *   npx tsx test/ui/build-fixtures.ts        rewrites the files
@@ -12,40 +12,28 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { structuredPatch } from "diff"
+import { buildDigest, parseChecks } from "../../src/core/digest.ts"
+import { slug } from "../../src/core/names.ts"
+import { boardView } from "../../src/core/views.ts"
 import type {
-  Action,
   Activity,
   ActivityKind,
   AgentInfo,
   AgentKind,
   Attempt,
-  AttemptView,
   BoardView,
   Brief,
-  CheckResult,
   Digest,
   FileStat,
   Job,
-  Lane,
   MergeReport,
   Project,
+  ProjectState,
   ProjectSummary,
   Review,
-  TaskView,
 } from "../../src/core/types.ts"
 
 // ------------------------------------------------------------------ names, shas and time (as core/names.ts)
-
-export function slug(input: string, max: number): string {
-  return input
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, max)
-    .replace(/-+$/g, "")
-}
 
 /** A stable 40-hex sha per label, so fixtures do not churn between builds. */
 function shaOf(label: string): string {
@@ -132,6 +120,7 @@ const EDITS = {
   ),
   footerCopy: edit("site/index.html", (html) => html.replace("Posted by the night clerk.", "Posted nightly by the clerk.")),
   readmeBlurb: edit("README.md", (text) => text.replace("Pier notices for the Northline night shift.", "A pier notice for the night shift.\nPosted nightly by the clerk.")),
+  controlNote: withFile(".shipboard/review-notes.md", "Agent-written review notes do not belong in the brief directory.\n"),
   tides: withFile(
     "site/tides.html",
     `<!DOCTYPE html>
@@ -199,153 +188,19 @@ function treeDiff(base: Files, head: Files): { diff: string; files: FileStat[] }
   return { diff, files }
 }
 
-// ------------------------------------------------------------------ digest (as core/digest.ts)
-
-const CHECK = /^contains\s+(\S+)\s+"(.*)"\s*$/
-
-function listPhrase(items: string[], max = 3): string {
-  const list = items.slice(0, max)
-  const rest = items.length - list.length
-  if (rest > 0) return `${list.join(", ")} and ${rest} more`
-  if (list.length <= 1) return list.join("")
-  return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`
-}
-
-const covered = (file: string, briefPaths: string[]) => briefPaths.some((p) => (p.endsWith("/") ? file.startsWith(p) : file === p))
+// ------------------------------------------------------------------ core digest and board view
 
 function digestOf(brief: Brief, base: Files, head: Files, baseSha: string, headSha: string): Digest {
-  const { files } = treeDiff(base, head)
-  const checks: CheckResult[] = []
-  for (const raw of brief.acceptance.split(/\r?\n/)) {
-    const m = raw.trim().match(CHECK)
-    if (m) checks.push({ path: m[1] ?? "", text: m[2] ?? "", ok: (head[m[1] ?? ""] ?? "").includes(m[2] ?? "") })
-  }
-  const unexpectedPaths = files.filter((f) => !covered(f.path, brief.paths)).map((f) => f.path)
-  const missedPaths = brief.paths.filter((p) => (p.endsWith("/") ? !files.some((f) => f.path.startsWith(p)) : !files.some((f) => f.path === p)))
-  const failed = checks.filter((c) => !c.ok)
-  const concerns: string[] = []
-  if (failed.length) concerns.push(failed.length === 1 ? `Acceptance check failed for ${failed[0]?.path}.` : `${failed.length} acceptance checks failed.`)
-  if (unexpectedPaths.length) concerns.push(`Outside the brief: ${listPhrase(unexpectedPaths)}.`)
-  if (missedPaths.length) concerns.push(`Not touched: ${listPhrase(missedPaths)}.`)
-  const satisfies: Digest["satisfies"] = concerns.length ? "no" : checks.length ? "yes" : "unchecked"
-  const verdict = concerns[0] ?? (checks.length === 1 ? "Acceptance check passed." : checks.length > 1 ? `All ${checks.length} acceptance checks passed.` : "No machine-readable acceptance check. Read the diff.")
-  const lead = files.length === 0 ? "No files changed beyond the brief." : files.length <= 2 ? `Touched ${listPhrase(files.map((f) => f.path))}.` : `Touched ${files.length} files.`
-  return {
-    summary: `${lead} ${verdict}`,
-    satisfies,
-    reasons: [lead, ...(concerns.length ? concerns : [verdict])],
-    files,
-    checks,
-    unexpectedPaths,
-    missedPaths,
-    controlPaths: [],
-    headSha,
-    baseSha,
-  }
+  const files = treeDiff(base, head).files
+  const checks = parseChecks(brief.acceptance).map(({ path, text }) => ({ path, text, ok: (head[path] ?? "").includes(text) }))
+  return buildDigest({ brief, files, checks, baseSha, headSha })
 }
 
-// ------------------------------------------------------------------ lanes and views (as docs/ARCHITECTURE.md, core/views.ts)
-
-const LANES: Lane[] = ["rerun", "ship", "review", "working", "parked", "shipped"]
-
-function placement(a: Attempt): { lane: Lane | null; primary: Action; secondary: Action[] } {
-  switch (a.status) {
-    case "ready":
-      if (!a.merge) return { lane: "working", primary: "wait", secondary: ["park"] }
-      if (a.merge.state === "conflict") return { lane: "rerun", primary: "rerun", secondary: ["park"] }
-      if (a.digest?.satisfies === "no" || a.review?.verdict === "off-brief" || (a.digest?.controlPaths.length ?? 0) > 0) {
-        return { lane: "review", primary: "ship-anyway", secondary: ["park", "rerun"] }
-      }
-      return { lane: "ship", primary: "ship", secondary: ["park", "rerun"] }
-    case "failed":
-      return { lane: "rerun", primary: "rerun", secondary: ["park"] }
-    case "waiting":
-      return { lane: "working", primary: "wait", secondary: ["park"] }
-    case "parked":
-      return { lane: "parked", primary: "unpark", secondary: ["rerun"] }
-    case "shipped":
-      return { lane: "shipped", primary: "none", secondary: [] }
-    case "discarded":
-      return { lane: null, primary: "none", secondary: [] }
-  }
-}
-
-type Scene = {
-  version: number
-  project: Project
-  briefs: Brief[]
-  attempts: Attempt[]
-  jobs: Job[]
-  activity: Activity[]
-  agents: AgentInfo[]
-}
-
-function attemptView(scene: Scene, a: Attempt, live: boolean): AttemptView {
-  const job = scene.jobs.find((j) => j.attemptId === a.id) ?? null
-  const place = live ? placement(a) : { primary: "none" as const, secondary: [] }
-  return {
-    id: a.id,
-    briefId: a.briefId,
-    number: a.number,
-    agent: a.agent,
-    agentLabel: label(a.agent),
-    agentKind: AGENT_INFO[a.agent]?.kind ?? "cli",
-    status: a.status,
-    repo: a.repo,
-    baseSha: a.baseSha,
-    briefSha: a.briefSha,
-    headSha: a.headSha,
-    createdAt: a.createdAt,
-    updatedAt: a.updatedAt,
-    job: job ? { ...job, agentLabel: label(job.agent) } : null,
-    digest: a.digest,
-    merge: a.merge,
-    review: a.review,
-    replacedBy: a.replacedBy,
-    replaces: a.replaces,
-    discardReason: a.discardReason,
-    shippedSha: a.shippedSha,
-    previewUrl: a.headSha !== a.briefSha ? `/preview/${scene.project.id}/${a.id}/` : null,
-    primary: place.primary,
-    secondary: place.secondary,
-  }
-}
+type Scene = Pick<ProjectState, "version" | "project" | "briefs" | "attempts" | "jobs" | "activity"> & { agents: AgentInfo[] }
 
 function boardOf(scene: Scene): BoardView {
-  const tasks: TaskView[] = []
-  for (const brief of scene.briefs) {
-    const mine = scene.attempts.filter((a) => a.briefId === brief.id).sort((x, y) => y.number - x.number)
-    const current = mine.find((a) => a.status !== "discarded") ?? mine[0]
-    if (!current) continue
-    tasks.push({
-      brief,
-      lane: placement(current).lane ?? "shipped",
-      current: attemptView(scene, current, true),
-      history: mine.filter((a) => a !== current).map((a) => attemptView(scene, a, false)),
-    })
-  }
-  const lanes = LANES.map((lane) => ({
-    lane,
-    tasks: tasks.filter((t) => t.lane === lane).sort((a, b) => (a.current.updatedAt < b.current.updatedAt ? 1 : a.current.updatedAt > b.current.updatedAt ? -1 : 0)),
-  }))
-  const counts = Object.fromEntries(lanes.map((l) => [l.lane, l.tasks.length])) as Record<Lane, number>
-  return {
-    version: scene.version,
-    project: {
-      id: scene.project.id,
-      name: scene.project.name,
-      description: scene.project.description,
-      createdAt: scene.project.createdAt,
-      mainSha: scene.project.mainSha,
-      counts,
-      repo: scene.project.repo,
-      seed: scene.project.seed,
-      previewUrl: `/preview/${scene.project.id}/main/`,
-    },
-    lanes,
-    activity: scene.activity,
-    agents: scene.agents,
-  }
+  const { agents, ...state } = scene
+  return boardView({ schema: 1, reconciledAt: 0, ...state }, agents)
 }
 
 const summaryOf = (board: BoardView): ProjectSummary => {
@@ -552,7 +407,7 @@ function harborProject(out: Out, previews: Record<string, string>) {
 
   // Re-run: attempt 1 is discarded with one sentence; attempt 2 forks the new main with the same brief.
   const rerunAt = T("21:14:40")
-  const reason = `Conflicted with main in site/index.html after ${q(rename.task)} shipped.`
+  const reason = "Conflicted with main in site/index.html."
   const tint1Discarded: Attempt = { ...tint1Conflict, status: "discarded", updatedAt: rerunAt, replacedBy: tint2.id, discardReason: reason }
   const tint2Waiting: Attempt = { ...waitingAttempt(tint2, rerunAt), replaces: tint1.id }
   const rerunActivity = act(rerunAt, "rerun", `Re-ran ${q(tint.task)} as attempt 2 on main ${short(mainR)}. Attempt 1 was discarded: ${reason}`, { briefId: tint.id, attemptId: tint2.id, agent: "demo" })
@@ -654,7 +509,7 @@ function northlineProject(out: Out, previews: Record<string, string>) {
   const tint1 = fork(tint, "3b1c", 1, "claude", seed, main0, tint.createdAt, [EDITS.markColor])
   const tint2 = fork(tint, "77de", 2, "claude", filesF, mainF, T("21:13:40"), [EDITS.markColor])
   const tides1 = fork(tides, "9a51", 1, "codex", seed, main0, tides.createdAt, [EDITS.tides])
-  const copy1 = fork(copy, "c3d9", 1, "grok", filesF, mainF, copy.createdAt, [EDITS.footerCopy, EDITS.readmeBlurb])
+  const copy1 = fork(copy, "c3d9", 1, "grok", filesF, mainF, copy.createdAt, [EDITS.footerCopy, EDITS.readmeBlurb, EDITS.controlNote])
   const storm1 = fork(storm, "1d0b", 1, "cursor", seed, main0, storm.createdAt, [EDITS.storm])
   const ferry1 = fork(ferry, "e270", 1, "cursor", seed, main0, ferry.createdAt, [])
   const slip1 = fork(slipway, "48fa", 1, "claude", seed, main0, slipway.createdAt, [EDITS.slipway])
@@ -665,7 +520,7 @@ function northlineProject(out: Out, previews: Record<string, string>) {
   const shipR = T("21:08:30")
   const shipF = T("21:09:10")
   const tint1Discard = T("21:13:40")
-  const reasonTint = `Conflicted with main in site/index.html after ${q(rename.task)} shipped.`
+  const reasonTint = "Conflicted with main in site/index.html."
 
   const attempts: Attempt[] = [
     { ...readyAttempt(rename1, { updatedAt: shipR, mainSha: main0, checkedAt: T("21:05:13"), review: review("satisfies", "Changes the mark text and nothing else.", forkHead(rename1).headSha, T("21:05:15")) }), status: "shipped", shippedSha: mainR },
@@ -677,8 +532,8 @@ function northlineProject(out: Out, previews: Record<string, string>) {
       discardReason: reasonTint,
     },
     { ...readyAttempt(tint2, { updatedAt: T("21:14:03"), mainSha: mainF, checkedAt: T("21:14:03"), review: review("satisfies", "Colours the renamed mark teal. The footer is untouched.", forkHead(tint2).headSha, T("21:14:05")) }), replaces: tint1.id },
-    readyAttempt(tides1, { updatedAt: T("21:09:52"), mainSha: mainF, checkedAt: T("21:09:52"), review: review("satisfies", "A static four-day table of high and low water. No scripts, no outside assets.", forkHead(tides1).headSha, T("21:09:55")) }),
-    readyAttempt(copy1, { updatedAt: T("21:12:07"), mainSha: mainF, checkedAt: T("21:12:07"), review: review("partial", "The footer now reads in one line. The README edit was not asked for.", forkHead(copy1).headSha, T("21:12:10")) }),
+    readyAttempt(tides1, { updatedAt: T("21:09:52"), mainSha: mainF, checkedAt: T("21:09:52"), review: review("partial", "The table is present, but the free-text reading guidance needs a human check.", forkHead(tides1).headSha, T("21:09:55")) }),
+    readyAttempt(copy1, { updatedAt: T("21:12:07"), mainSha: mainF, checkedAt: T("21:12:07"), review: review("off-brief", "The README and a shipboard control file were changed without being requested.", forkHead(copy1).headSha, T("21:12:10")) }),
     { ...readyAttempt(storm1, { updatedAt: T("21:07:05"), mainSha: main0, checkedAt: T("21:06:31") }), status: "parked" },
     waitingAttempt(ferry1, T("21:05:20"), "failed"),
     readyAttempt(slip1, { updatedAt: T("21:09:11"), mainSha: mainF, checkedAt: T("21:09:11"), conflict: ["site/index.html"], review: review("satisfies", "One sentence about the slipway, placed after the lede.", forkHead(slip1).headSha, T("21:07:44")) }),

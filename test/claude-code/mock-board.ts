@@ -8,14 +8,21 @@ import fs from "node:fs"
 import http from "node:http"
 import type { AddressInfo } from "node:net"
 import path from "node:path"
+import { buildDigest, checkPath, parseChecks } from "../../src/core/digest.ts"
+import { slug } from "../../src/core/names.ts"
+import { boardView } from "../../src/core/views.ts"
 import type {
-  AttemptView,
+  AgentInfo,
+  Attempt,
   BoardView,
   Brief,
   ClaimedJob,
+  FileStat,
   GitCredentials,
+  Job,
   JobOutcome,
-  Lane,
+  ProjectState,
+  Review,
 } from "../../src/core/types.ts"
 
 export type MockJob = {
@@ -24,6 +31,9 @@ export type MockJob = {
   runnerId?: string
   pushedSha?: string
   conflict?: boolean
+  reviewVerdict?: Review["verdict"]
+  /** Allow a deliberately stale review to verify core placement ignores it. */
+  reviewHeadSha?: string
   bare: string
 }
 
@@ -38,7 +48,6 @@ export type QueueOptions = {
 }
 
 const GIT_ENV = { ...process.env, GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" }
-const LANES: Lane[] = ["rerun", "ship", "review", "working", "parked", "shipped"]
 
 export class MockBoard {
   url = ""
@@ -140,90 +149,100 @@ export class MockBoard {
   }
 
   board(): BoardView {
-    const tasks = this.jobs.map((j) => ({ lane: laneOf(j), task: { brief: j.job.brief, lane: laneOf(j), current: this.attemptView(j), history: [] } }))
-    const counts = Object.fromEntries(LANES.map((lane) => [lane, tasks.filter((t) => t.lane === lane).length])) as Record<Lane, number>
-    return {
-      version: this.version,
-      project: {
-        id: this.projectId,
-        name: "Harbor notes",
-        description: "",
-        createdAt: new Date(0).toISOString(),
-        mainSha: this.jobs[0]?.job.baseSha ?? "",
-        counts,
-        repo: this.projectId,
-        seed: "harbor",
-        previewUrl: `/preview/${this.projectId}/main/`,
-      },
-      lanes: LANES.map((lane) => ({ lane, tasks: tasks.filter((t) => t.lane === lane).map((t) => t.task) })),
-      activity: [],
-      agents: [{ id: "claude-code", label: "Claude Code (interactive)", kind: "cli" }],
+    const now = new Date().toISOString()
+    const agents: AgentInfo[] = [{ id: "claude-code", label: "Claude Code (interactive)", kind: "cli" }]
+    const project = {
+      id: this.projectId,
+      name: "Harbor notes",
+      description: "",
+      createdAt: new Date(0).toISOString(),
+      mainSha: this.jobs[0]?.job.baseSha ?? "",
+      repo: this.projectId,
+      seed: "harbor" as const,
     }
+    const attempts: Attempt[] = this.jobs.map((j) => this.attempt(j, now, project.mainSha))
+    const jobs: Job[] = this.jobs.map((j) => {
+      const finished = this.finished.find((item) => item.attemptId === j.job.attemptId)
+      return {
+        attemptId: j.job.attemptId,
+        agent: j.job.agent,
+        state: j.state,
+        queuedAt: j.job.brief.createdAt,
+        ...(j.runnerId ? { runnerId: j.runnerId, claimedAt: j.job.brief.createdAt, leaseExpiresAt: j.job.leaseExpiresAt } : {}),
+        ...(finished ? { finishedAt: now, outcome: finished.outcome } : {}),
+      }
+    })
+    const state: ProjectState = {
+      schema: 1,
+      version: this.version,
+      project,
+      briefs: this.jobs.map((j) => j.job.brief),
+      attempts,
+      jobs,
+      activity: [],
+      reconciledAt: 0,
+    }
+    return boardView(state, agents)
   }
 
-  private attemptView(j: MockJob): AttemptView {
+  private attempt(j: MockJob, now: string, mainSha: string): Attempt {
     const { job } = j
     const head = j.pushedSha
-    const checks = head ? this.checks(j, head) : []
-    const passed = checks.every((c) => c.ok)
+    const files = head ? this.changedFiles(j, head) : []
+    const checks = head ? parseChecks(job.brief.acceptance).map((check) => {
+      const file = checkPath(check)
+      let content = ""
+      let found = false
+      if (file) {
+        try {
+          content = git(j.bare, "show", `${head}:${file}`)
+          found = true
+        } catch {
+          // A missing file fails the check, just as the core assessor does.
+        }
+      }
+      return { ...check, ok: found && content.includes(check.text) }
+    }) : []
+    const digest = head ? buildDigest({ brief: job.brief, files, checks, baseSha: job.baseSha, headSha: head }) : null
     const conflict = head !== undefined && j.conflict === true
-    const now = new Date().toISOString()
     return {
       id: job.attemptId,
       briefId: job.brief.id,
       number: job.attemptNumber,
       agent: job.agent,
-      agentLabel: job.agent,
-      agentKind: "cli",
       status: head ? "ready" : "waiting",
       repo: job.attemptId,
       baseSha: job.baseSha,
       briefSha: job.briefSha,
       headSha: head ?? job.briefSha,
-      createdAt: now,
+      createdAt: job.brief.createdAt,
       updatedAt: now,
-      job: null,
-      digest: head
-        ? {
-            summary: `Touched ${job.brief.paths.join(", ")}. ${passed ? "Acceptance check passed." : "Acceptance check failed."}`,
-            satisfies: passed ? "yes" : "no",
-            reasons: [],
-            files: [],
-            checks,
-            unexpectedPaths: [],
-            missedPaths: [],
-            controlPaths: [],
-            headSha: head,
-            baseSha: job.baseSha,
-          }
-        : null,
-      merge: head ? { state: conflict ? "conflict" : "clean", paths: conflict ? ["site/index.html"] : [], mainSha: job.baseSha, headSha: head, checkedAt: now } : null,
-      review: head ? { verdict: "satisfies", note: "Sets the lede the brief asks for.", model: "mock-reviewer", headSha: head, at: now } : null,
+      digest,
+      merge: head ? { state: conflict ? "conflict" : "clean", paths: conflict ? ["site/index.html"] : [], mainSha, headSha: head, checkedAt: now } : null,
+      review: head ? { verdict: j.reviewVerdict ?? "satisfies", note: "Mock reviewer checked the brief.", model: "mock-reviewer", headSha: j.reviewHeadSha ?? head, at: now } : null,
       replacedBy: null,
       replaces: null,
       discardReason: null,
       shippedSha: null,
-      previewUrl: head ? `/preview/${this.projectId}/${job.attemptId}/` : null,
-      primary: !head ? "wait" : conflict ? "rerun" : passed ? "ship" : "ship-anyway",
-      secondary: [],
     }
   }
 
-  private checks(j: MockJob, sha: string) {
-    return j.job.brief.acceptance
-      .split("\n")
-      .map((line) => /^contains (\S+) "(.*)"$/.exec(line.trim()))
-      .filter((m): m is RegExpExecArray => m !== null)
-      .map((m) => {
-        const file = m[1] ?? ""
-        const text = m[2] ?? ""
-        let content = ""
-        try {
-          content = git(j.bare, "show", `${sha}:${file}`)
-        } catch {
-          content = ""
+  private changedFiles(j: MockJob, head: string): FileStat[] {
+    const range = `${j.job.baseSha}..${head}`
+    const counts = new Map(git(j.bare, "diff", "--no-renames", "--numstat", range)
+      .split("\n").filter(Boolean).map((line) => {
+        const [added, deleted, file] = line.split("\t")
+        return [file ?? "", { additions: Number(added) || 0, deletions: Number(deleted) || 0 }] as const
+      }))
+    return git(j.bare, "diff", "--no-renames", "--name-status", range)
+      .split("\n").filter(Boolean).map((line): FileStat => {
+        const [code, file = ""] = line.split("\t")
+        const stat = counts.get(file) ?? { additions: 0, deletions: 0 }
+        return {
+          path: file,
+          status: code === "A" ? "added" : code === "D" ? "deleted" : "modified",
+          ...stat,
         }
-        return { path: file, text, ok: content.includes(text) }
       })
   }
 
@@ -364,20 +383,6 @@ export function canonical(brief: Brief): string {
 
 export function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", ["-c", "user.name=Shipboard", "-c", "user.email=shipboard@users.noreply.local", ...args], { cwd, env: GIT_ENV, encoding: "utf8" }).trim()
-}
-
-function laneOf(j: MockJob): Lane {
-  if (!j.pushedSha) return "working"
-  return j.conflict ? "rerun" : "ship"
-}
-
-function slug(text: string, max: number): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, max)
-    .replace(/-+$/g, "")
 }
 
 function readBody(req: http.IncomingMessage): Promise<Buffer> {

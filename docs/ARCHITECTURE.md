@@ -110,6 +110,9 @@ Operations:
 3. Reconcile: `board()` (throttled to once per 10 s) and `tick()` compare each `waiting`/`ready`
    attempt's stored `headSha` with `artifacts.head(repo)` and assess the ones that moved.
 A push to the main repo (someone pushed main directly) updates `mainSha` and re-runs trial merges.
+All three paths, runner completion, and the scripted demo report heads through `noteHead` in the
+project service. It owns the live-attempt and already-seen checks. The demo's file edits and Git
+commit live in `core/demo.ts`; the service records its job outcome and the resulting head.
 
 ### Assess
 `waiting` → `ready` on the first head beyond `briefSha`. Recompute digest, trial merge, and (if a
@@ -118,9 +121,9 @@ reviewer is configured and the head is new) review. Activity: `pushed`, then `as
 
 ### Ship
 Only from `ready`, merge `clean`, head == `expectedHead` when supplied. Digest `satisfies: "no"` or
-review `off-brief` still allows shipping, but the UI labels the button "Ship anyway". After the
-push: attempt `shipped`, `shippedSha` set, `mainSha` updated, every other `ready` attempt re-assessed
-(that is how conflicts appear). Activity: `shipped`, and `conflict` for each attempt that now
+a current-head review of `partial` or `off-brief` still allows shipping, but the UI labels the button
+"Ship anyway". After the push: attempt `shipped`, `shippedSha` set, `mainSha` updated, every other
+`ready` attempt re-assessed (that is how conflicts appear). Activity: `shipped`, and `conflict` for each attempt that now
 conflicts.
 
 ### Re-run
@@ -146,7 +149,7 @@ Derived in `core/state.ts` from the current attempt of each brief:
 |---|---|---|---|
 | `ready`, merge `conflict` | `rerun` | `rerun` | `park` |
 | `failed` | `rerun` | `rerun` | `park` |
-| `ready`, clean, digest not `no`, review not `off-brief`, no control paths | `ship` | `ship` | `park`, `rerun` |
+| `ready`, clean, digest not `no`, current-head review `satisfies` or absent, no control paths | `ship` | `ship` | `park`, `rerun` |
 | `ready`, clean, otherwise | `review` | `ship-anyway` | `park`, `rerun` |
 | `waiting` | `working` | `wait` | `park` |
 | `parked` | `parked` | `unpark` | `rerun` |
@@ -154,6 +157,8 @@ Derived in `core/state.ts` from the current attempt of each brief:
 
 Lane order on the board: rerun, ship, review, working, parked, shipped. Within a lane, newest
 `updatedAt` first. `discarded` attempts only appear in their task's `history`.
+A review applies only to its recorded `headSha`; a verdict for an older head does not affect lane
+placement or the card's review explanation.
 
 ## Digest rules (core/digest.ts)
 

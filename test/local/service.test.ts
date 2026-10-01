@@ -111,4 +111,57 @@ describe("ProjectService on its own ports", () => {
     const board = await fresh.board()
     expect(allTasks(board)[0]?.current.status).toBe("ready")
   })
+
+  it("deduplicates stale fork notifications and resolves main events to the current head", async () => {
+    const server = await boot()
+    const dir = await tempDir()
+    const id = "head-ingress-0001"
+    const service = new ProjectService(id,
+      { artifacts: server.host.artifacts, state: new JsonStateStore(path.join(dir, `${id}.json`)), log: quiet },
+      { agents: defaultAgents() })
+    await service.init({ id, name: "Head ingress" })
+    const { attemptId } = await service.dispatch({ task: "Write a file", paths: ["a.txt"], agent: "manual" })
+    const git = new GitWorkspace(server.host.artifacts)
+    const first = await git.commit(attemptId, { "a.txt": "one\n" }, "first")
+    await service.onPushEvent({ repo: attemptId, ref: "refs/heads/main", after: first.sha })
+    const second = await git.commit(attemptId, { "a.txt": "two\n" }, "second")
+    await service.pushed(attemptId, second.sha)
+    const before = await service.board({ reconcile: false })
+    await service.onPushEvent({ repo: attemptId, ref: "refs/heads/main", after: first.sha })
+    await service.onPushEvent({ repo: attemptId, ref: "refs/heads/main", after: second.sha })
+    const unchanged = await service.board({ reconcile: false })
+    expect(unchanged.version).toBe(before.version)
+    expect(unchanged.activity.filter((item) => item.kind === "pushed")).toHaveLength(2)
+    expect(allTasks(unchanged)[0]?.current.headSha).toBe(second.sha)
+
+    const main1 = await git.commit(id, { "main.txt": "one\n" }, "main one")
+    const main2 = await git.commit(id, { "main.txt": "two\n" }, "main two")
+    await service.onPushEvent({ repo: id, ref: "refs/heads/main", after: main1.sha })
+    const moved = await service.board({ reconcile: false })
+    expect(moved.project.mainSha).toBe(main2.sha)
+    expect(moved.activity.filter((item) => item.kind === "project" && item.text.includes("outside shipboard"))).toHaveLength(1)
+    await service.onPushEvent({ repo: id, ref: "refs/heads/main", after: main1.sha })
+    expect((await service.board({ reconcile: false })).version).toBe(moved.version)
+  })
+
+  it("assesses an unreported push even when its runner finishes with an error", async () => {
+    const server = await boot()
+    const dir = await tempDir()
+    const id = "finish-head-0001"
+    const service = new ProjectService(id,
+      { artifacts: server.host.artifacts, state: new JsonStateStore(path.join(dir, `${id}.json`)), log: quiet },
+      { agents: defaultAgents() })
+    await service.init({ id, name: "Finish head" })
+    const { attemptId } = await service.dispatch({ task: "Partial work", paths: ["a.txt"], agent: "codex" })
+    await service.claim("runner-1", ["codex"])
+    const pushed = await new GitWorkspace(server.host.artifacts).commit(attemptId, { "a.txt": "partial\n" }, "partial")
+    const finished = await service.finish(attemptId, "runner-1", { reason: "agent_error", summary: "Stopped after push." })
+    const current = allTasks(finished)[0]?.current
+    expect(current?.headSha).toBe(pushed.sha)
+    expect(current?.status).toBe("ready")
+    expect(current?.job?.state).toBe("failed")
+    expect(finished.activity.map((item) => item.kind)).toEqual(expect.arrayContaining(["failed", "pushed", "assessed"]))
+    await service.onPushEvent({ repo: attemptId, ref: "refs/heads/main", after: pushed.sha })
+    expect((await service.board({ reconcile: false })).version).toBe(finished.version)
+  })
 })

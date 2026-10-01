@@ -22,7 +22,7 @@ const MOVE_MS = 560
 export const LANES = {
   rerun: { name: "Needs re-run", short: "Re-run", desc: "Conflicts with main. Re-run drops the diff and runs the brief again." },
   ship: { name: "Ready to ship", short: "Ship", desc: "Clean, on brief, checked." },
-  review: { name: "Needs a look", short: "Look", desc: "Clean, but off brief or unchecked." },
+  review: { name: "Needs a look", short: "Look", desc: "Clean, but needs a human review." },
   working: { name: "Agent working", short: "Working", desc: "A fork with its brief and no push yet." },
   parked: { name: "Parked", short: "Parked", desc: "Set aside. Nothing runs." },
   shipped: { name: "Shipped", short: "Shipped", desc: "On main." },

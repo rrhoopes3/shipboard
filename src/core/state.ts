@@ -14,9 +14,10 @@ export const MANUAL_TOKEN_TTL = 60 * 60
 export type Placement = { lane: Lane | null; primary: Action; secondary: Action[] }
 
 function needsReview(attempt: Attempt): boolean {
+  const currentReview = attempt.review?.headSha === attempt.headSha ? attempt.review : null
   return (
     attempt.digest?.satisfies === "no" ||
-    attempt.review?.verdict === "off-brief" ||
+    (currentReview !== null && currentReview.verdict !== "satisfies") ||
     (attempt.digest?.controlPaths.length ?? 0) > 0
   )
 }

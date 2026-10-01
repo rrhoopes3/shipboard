@@ -4,9 +4,9 @@
  * retried step. The DO's onPushEvent is idempotent per (repo, after), and reconcile catches any
  * push whose event never arrives.
  *
- * How the trigger delivers the event to `run()` is not documented, so parsing accepts the
- * CloudEvent itself, a wrapper whose `payload` or `body` (object or JSON text) is the CloudEvent,
- * the bare inner payload when it names the repo, or a batch of any of those.
+ * `event.payload` is the documented Artifacts event, with source.namespace/source.repoName
+ * and payload.ref/payload.after. Unrecognized events are left to reconcile.
+ * https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/#pushed
  */
 
 import { WorkflowEntrypoint } from "cloudflare:workers"
@@ -24,9 +24,7 @@ export type PushEvent = {
   repo: string
   ref: string
   after: string
-  before: string | null
-  /** Null when the event did not say. */
-  namespace: string | null
+  namespace: string
 }
 
 type Obj = Record<string, unknown>
@@ -39,67 +37,24 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null
 }
 
-function parsed(value: unknown): unknown {
-  if (typeof value !== "string") return value
-  try {
-    return JSON.parse(value)
-  } catch {
-    return null
-  }
-}
-
-/** Peels wrappers until something looks like the push itself: it has a `type`, a `source`, or a push payload. */
-function unwrap(input: unknown): Obj | null {
-  let current = obj(parsed(input))
-  for (let depth = 0; current && depth < 4; depth++) {
-    if (text(current.type)?.startsWith("cf.") || obj(current.source) || text(current.after)) return current
-    const inner = current.body ?? current.payload ?? current.event ?? current.data
-    current = obj(parsed(inner))
-  }
-  return null
-}
-
-/** The push in any of the shapes above, or null for other events, deleted refs and anything malformed. */
+/** Read one documented push event; reject other events, deleted refs and malformed input. */
 export function parsePushEvent(input: unknown): PushEvent | null {
-  const event = unwrap(input)
-  if (!event) return null
-  const type = text(event.type)
-  if (type && type !== PUSHED) return null
+  const event = obj(input)
+  if (event?.type !== PUSHED) return null
   const source = obj(event.source)
-  const inner = obj(parsed(event.payload))
-  const data = inner && (text(inner.after) || text(inner.ref)) ? inner : event
-  const repo =
-    text(source?.repoName) ??
-    text(source?.repo_name) ??
-    text(source?.repo) ??
-    text(data.repoName) ??
-    text(data.repo_name) ??
-    text(data.repo) ??
-    text(event.repoName)
-  const namespace = text(source?.namespace) ?? text(data.namespace) ?? text(event.namespace)
-  const ref = text(data.ref)
-  const after = text(data.after)?.toLowerCase() ?? null
-  const before = text(data.before)?.toLowerCase() ?? null
-  if (!repo || !isRepoName(repo) || !ref || !ref.startsWith("refs/") || !after || !SHA.test(after) || ZERO.test(after)) return null
-  return { repo, ref, after, before: before && SHA.test(before) ? before : null, namespace }
-}
-
-/** Every push in the input: one event, or a batch (`[...]`, `{ events: [...] }`, `{ messages: [...] }`). */
-export function parsePushEvents(input: unknown): PushEvent[] {
-  const value = parsed(input)
-  const holder = obj(value)
-  const batch = Array.isArray(value)
-    ? value
-    : [holder?.events, holder?.messages, parsed(holder?.payload)].find((item): item is unknown[] => Array.isArray(item))
-  const items = batch ?? [value]
-  return items.map((item) => parsePushEvent(item)).filter((push): push is PushEvent => push !== null)
+  const payload = obj(event.payload)
+  const repo = text(source?.repoName)
+  const namespace = text(source?.namespace)
+  const ref = text(payload?.ref)
+  const after = text(payload?.after)
+  if (!namespace || !repo || !isRepoName(repo) || !ref || !ref.startsWith("refs/") || !after || !SHA.test(after) || ZERO.test(after)) return null
+  return { repo, ref, after, namespace }
 }
 
 export type PushOutcome =
   | { done: true; projectId: string; repo: string; after: string }
   | { skipped: string }
   | { refused: string; status: number }
-  | { batch: PushOutcome[] }
 
 /** Statuses worth another try: the project or a remote was busy or broken. 4xx answers are final. */
 export function retryable(status: number): boolean {
@@ -115,19 +70,13 @@ export class PushWorkflow extends WorkflowEntrypoint<Env, unknown> {
 type StepRunner = Pick<WorkflowStep, "do">
 
 export async function handlePush(env: Pick<Env, "PROJECT" | "ARTIFACTS_NAMESPACE">, payload: unknown, step: StepRunner): Promise<PushOutcome> {
-  const pushes = parsePushEvents(payload)
-  if (pushes.length === 0) {
+  const push = parsePushEvent(payload)
+  if (!push) {
     workerLog.warn("push workflow got an event it does not understand", { sample: JSON.stringify(payload ?? null).slice(0, 300) })
     return { skipped: "not a push event" }
   }
-  const outcomes: PushOutcome[] = []
-  for (const push of pushes) outcomes.push(await handleOne(env, push, step))
-  return outcomes.length === 1 && outcomes[0] ? outcomes[0] : { batch: outcomes }
-}
-
-async function handleOne(env: Pick<Env, "PROJECT" | "ARTIFACTS_NAMESPACE">, push: PushEvent, step: StepRunner): Promise<PushOutcome> {
   const namespace = namespaceOf(env)
-  if (push.namespace && push.namespace !== namespace) return { skipped: `namespace ${push.namespace} is not ${namespace}` }
+  if (push.namespace !== namespace) return { skipped: `namespace ${push.namespace} is not ${namespace}` }
   if (push.ref !== "refs/heads/main") return { skipped: `${push.ref} is not main` }
   const projectId = projectIdOf(push.repo)
   if (!isProjectId(projectId)) return { skipped: `${push.repo} is not a shipboard repo` }
