@@ -38,25 +38,60 @@ there.
 
 ## Status
 
-2026-10-01: plan only. Nothing built yet. Read [`docs/PLAN.md`](docs/PLAN.md) for the contest
-rules as read from the terms PDF, the verified API surface, the schedule, and the go/no-go
-gate (a working trial-merge by 2026-10-03).
+2026-10-01: the local board runs. Forks, briefs, digests, real `git merge-tree` trial-merges,
+ship / park / re-run, and a thin agent client are in this tree. Cloudflare Artifacts, Queues,
+and the Sandbox SDK are not wired — that needs a Workers Paid account on the Artifacts beta.
+Until then, git on this machine stands in for Artifacts and the sandbox.
+
+Read [`docs/PLAN.md`](docs/PLAN.md) for the contest rules, the verified API surface, and the
+schedule. The go/no-go gate there is a working trial-merge; `npm test` covers that locally.
 
 > `docs/PLAN.md` was written as an internal brief and mentions paths on the author's own
 > machine. Scrub it before this repo goes public for submission.
 
-## Planned layout
+## Layout
 
 ```
-worker/      Hono-or-plain Worker: Artifacts binding, project DO, queue consumer, board API + UI
-sandbox/     Sandbox SDK task: clone fork + main, trial-merge, report clean/conflict + paths
-agent/       the thin client an agent runs: mint fork, write brief, push, done
-docs/        plan, demo script, rules notes
+worker/      Hono app: board API, project state, local git repos
+sandbox/     trial-merge via git merge-tree (Sandbox SDK stand-in)
+agent/       thin client: open a fork, push files
+public/      ship board
+docs/        plan
 ```
 
 ## Running it
 
-Not yet. Requires a Cloudflare account on Workers Paid with the Artifacts open beta.
+Requires Node 22+ and `git` on `PATH`. No Cloudflare account is required for the local board.
+
+```bash
+npm install
+npm test
+npm start
+```
+
+Open http://127.0.0.1:8787
+
+The pier demo on the home page forks a small notice three ways and pushes. All three merge
+into the original main. Ship two of them. The third conflicts. Re-run it. The re-run starts
+from current main with the original brief. There is no merge editor.
+
+`PORT` changes the listen port (default 8787). `SHIPBOARD_DATA` changes where repos and the
+board store live (default `.data/`).
+
+Agent client, with the server already running. It can open a fork and push. Shipping stays
+on the board.
+
+```bash
+npm run agent -- list
+npm run agent -- fork --project <id> --task "Set the lede" --path site/index.html --acceptance "contains site/index.html \"ready for sea\"" --agent cursor
+npm run agent -- push --fork <id> --file site/index.html
+npm run agent -- status --project <id>
+```
+
+Acceptance checks are one per line: `contains <path> "<text>"`. Any other acceptance text is
+left for a person to read.
+
+A Workers deploy against live Artifacts is not wired up yet.
 
 ## License
 
