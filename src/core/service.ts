@@ -308,6 +308,7 @@ export class ProjectService implements ProjectHandle {
       old.discardReason = reason
       old.updatedAt = now
       this.dropQueuedJob(tx.state, old.id)
+      this.cancelRunningJob(tx.state, old.id, `Discarded for a re-run: ${reason}`)
       this.queueJob(tx, fresh)
       this.activity(tx.state, {
         kind: "rerun",
@@ -433,6 +434,7 @@ export class ProjectService implements ProjectHandle {
       attempt.status = "parked"
       attempt.updatedAt = this.now()
       this.dropQueuedJob(tx.state, attempt.id)
+      this.cancelRunningJob(tx.state, attempt.id, "A human parked the attempt.")
       this.activity(tx.state, {
         kind: "parked",
         text: `Parked "${oneLine(brief.task, 80)}".`,
@@ -467,7 +469,8 @@ export class ProjectService implements ProjectHandle {
 
   // ------------------------------------------------------------------ runner protocol
 
-  async claim(runnerId: string, agents: string[]): Promise<ClaimedJob | null> {
+  async claim(runnerId: string, agents: string[], opts?: { attemptId?: string }): Promise<ClaimedJob | null> {
+    if (opts?.attemptId) this.requireOwn(opts.attemptId)
     return this.write(async (tx) => {
       // Jobs whose attempt is no longer waiting (a human pushed, or it was discarded) are dropped.
       tx.state.jobs = tx.state.jobs.filter((job) => {
@@ -475,7 +478,7 @@ export class ProjectService implements ProjectHandle {
         const attempt = tx.state.attempts.find((item) => item.id === job.attemptId)
         return attempt?.status === "waiting"
       })
-      const job = this.claimable(tx.state, agents)[0]
+      const job = this.claimable(tx.state, agents).find((item) => !opts?.attemptId || item.attemptId === opts.attemptId)
       if (!job) return null
       const attempt = this.attemptOf(tx.state, job.attemptId)
       const brief = this.briefOf(tx.state, attempt)
@@ -875,6 +878,15 @@ export class ProjectService implements ProjectHandle {
 
   private dropQueuedJob(state: ProjectState, attemptId: string): void {
     state.jobs = state.jobs.filter((job) => !(job.attemptId === attemptId && job.state === "queued"))
+  }
+
+  /** A runner still holding the attempt loses its lease: heartbeat and credentials then answer 409. */
+  private cancelRunningJob(state: ProjectState, attemptId: string, summary: string): void {
+    const job = state.jobs.find((item) => item.attemptId === attemptId && item.state === "running")
+    if (!job) return
+    job.state = "failed"
+    job.finishedAt = this.now()
+    job.outcome = { reason: "cancelled", summary }
   }
 
   private claimable(state: ProjectState, agents: string[]): Job[] {

@@ -116,7 +116,8 @@ export interface ProjectHandle {
   rerun(attemptId: string, agent?: string): Promise<{ board: BoardView; attemptId: string }>
   diff(attemptId: string): Promise<{ diff: string; truncated: boolean; base: string; head: string }>
   preview(ref: string, path: string): Promise<{ body: Uint8Array; contentType: string } | null>
-  claim(runnerId: string, agents: string[]): Promise<ClaimedJob | null>
+  /** With `attemptId`, claims that queued job only (null if it is not claimable by `agents`). */
+  claim(runnerId: string, agents: string[], opts?: { attemptId?: string }): Promise<ClaimedJob | null>
   /** `queuedAt` of the oldest job `claim` would hand out for these agents, or null. Lets the claim fan-out pick the oldest job across projects. */
   nextJobAt(agents: string[]): Promise<string | null>
   heartbeat(attemptId: string, runnerId: string): Promise<{ leaseExpiresAt: string }>

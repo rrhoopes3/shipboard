@@ -391,6 +391,11 @@ export function createApi(host: Host, opts: ApiOptions = {}): Hono {
     const runnerId = runnerIdOf(body)
     const agents = agentsOf(body)
     await host.noteRunner(runnerId, agents)
+    const wanted = optionalString(body, "attemptId", 80)
+    if (wanted !== undefined) {
+      const job = await (await attemptProject(wanted)).claim(runnerId, agents, { attemptId: wanted })
+      return job ? c.json(job) : c.body(null, 204)
+    }
     const projects = await host.listProjects()
     const candidates = (
       await Promise.all(

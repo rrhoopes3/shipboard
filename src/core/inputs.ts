@@ -13,6 +13,7 @@ export const OUTCOME_REASONS: readonly JobOutcomeReason[] = [
   "unsafe_repo_config",
   "push_rejected",
   "lease_expired",
+  "cancelled",
 ]
 
 const SHA = /^[0-9a-f]{40}$/

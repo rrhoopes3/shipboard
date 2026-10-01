@@ -95,6 +95,8 @@ Operations:
   Returns `ClaimedJob` (no tokens).
 - `heartbeat` extends the lease by 3 min. `tick()` re-queues `running` jobs whose lease expired
   (outcome `lease_expired` recorded in activity), at most 3 times, then marks the attempt `failed`.
+- `park` and `re-run` cancel a running job (outcome `cancelled`): the runner's next heartbeat or
+  credentials call gets 409 and it stops.
 - `jobCredentials(scope)`: read token (TTL 15 min) for clone, write token (TTL 10 min) for push.
   Only for the runner holding the lease.
 - `finish(outcome)`: job `done` (reason `pushed`) or `failed`. `pushed` triggers `assess`. Any other
@@ -184,7 +186,7 @@ Mutations require `Content-Type: application/json` (415 otherwise).
 | POST | `/api/attempts/:id/rerun` | board | `{ agent?: string }` → `{ board, attemptId, notice }` |
 | GET | `/api/attempts/:id/diff` | read | `{ diff, truncated, base, head }` |
 | POST | `/api/attempts/:id/pushed` | board or runner | `{ sha?: string }` → `{ board }` |
-| POST | `/api/runner/claim` | runner | `{ runnerId, agents: string[] }` → 200 `ClaimedJob` or 204. Fans out over projects (oldest job first). |
+| POST | `/api/runner/claim` | runner | `{ runnerId, agents: string[], attemptId? }` → 200 `ClaimedJob` or 204. Fans out over projects (oldest job first); with `attemptId`, claims only that job. |
 | POST | `/api/runner/jobs/:attemptId/heartbeat` | runner | `{ runnerId }` → `{ leaseExpiresAt }` |
 | POST | `/api/runner/jobs/:attemptId/credentials` | runner | `{ runnerId, scope }` → `GitCredentials` |
 | POST | `/api/runner/jobs/:attemptId/finish` | runner | `{ runnerId, outcome: JobOutcome }` → `{ ok: true }` |

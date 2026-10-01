@@ -41,7 +41,7 @@ describe("api without tokens (local)", () => {
     expect(config.publicRead).toBe(true)
     expect(config.boardAuth).toBe(false)
     expect(config.namespace).toBe("local")
-    expect(config.agents.map((agent) => agent.id)).toEqual(["demo", "manual", "claude", "codex", "grok", "cursor"])
+    expect(config.agents.map((agent) => agent.id)).toEqual(["demo", "manual", "claude", "claude-code", "codex", "grok", "cursor"])
 
     const rebinding = await raw(`${server.url}/api/projects`, { headers: { Host: `evil.example:${server.port}` } })
     expect(rebinding.status).toBe(403)

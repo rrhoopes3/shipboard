@@ -9,6 +9,7 @@ export const DEFAULT_AGENTS: readonly AgentInfo[] = Object.freeze([
   { id: DEMO_AGENT, label: "Demo (scripted)", kind: "demo" },
   { id: MANUAL_AGENT, label: "Manual (you push)", kind: "manual" },
   { id: "claude", label: "Claude Code", kind: "cli" },
+  { id: "claude-code", label: "Claude Code (interactive)", kind: "cli" },
   { id: "codex", label: "Codex", kind: "cli" },
   { id: "grok", label: "Grok", kind: "cli" },
   { id: "cursor", label: "Cursor", kind: "cli" },

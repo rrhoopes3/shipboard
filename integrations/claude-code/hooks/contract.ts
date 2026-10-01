@@ -79,6 +79,8 @@ export type JobOutcomeReason =
   | "unsafe_repo_config"
   | "push_rejected"
   | "lease_expired"
+  /** A human parked or re-ran the attempt while a runner held it. */
+  | "cancelled"
 
 export type JobOutcome = {
   reason: JobOutcomeReason
