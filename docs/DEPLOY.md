@@ -8,11 +8,11 @@ The Cloudflare board is live at [shipboard.rick3.dev](https://shipboard.rick3.de
 uses `PUBLIC_READ=false`: project data, diffs, and previews require the board token. The separate
 dev environment retains `PUBLIC_READ=true`. The steps below describe deployment and verification.
 
-As of 2026-10-02, the [security self-test](https://shipboard.rick3.dev/p/shipboard-security-self-ef20)
-is in progress. Codex coordinates subagents working manually in existing Artifacts task forks.
-A completed event-triggered Workflow was captured for one brief push. The full
-dispatch/push/ship/conflict/re-run self-test remains in progress; native Claude, Grok, and Cursor
-runner execution remains unverified.
+On 2026-10-02, the [security self-test](https://shipboard.rick3.dev/p/shipboard-security-self-ef20)
+shipped three tasks through live dispatch, push, assessment, and ship. Codex subagents implemented
+the Artifacts forks, with a coordinator handling the runner protocol manually. A completed
+event-triggered Workflow was captured for one brief push. Live conflict/re-run behavior and
+native Claude, Grok, and Cursor runner execution remain unverified.
 
 ## What you need
 
@@ -138,6 +138,20 @@ namespace was `shipboard`, and its repo was the documentation task fork. This es
 trigger delivery for that push. See the [captured input fixtures](../test/cloudflare/fixtures/);
 synthetic fixtures and a ready board card alone do not establish live trigger delivery.
 
+All three security tasks subsequently passed their acceptance checks and clean trial merges,
+received positive AI reviews, and shipped to Artifacts main at
+`36b8dd7c5e173a5c618dbba9f94b634f7069e6ca`. The documentation task entered the Review lane because
+its config-test correction exceeded the original brief paths; the coordinator explicitly reviewed
+that addition before shipping. The original Grok/Cursor/Claude slot labels record assignment
+provenance; Codex subagents performed the work and the coordinator handled the runner protocol.
+The six event-triggered Workflows for those three fix pushes and three ships also completed,
+with assessment outputs matching their respective Git heads.
+
+Source integration `5c62b69` passed 468 tests across 38 files, type checking, and the Cloudflare
+dry-run build. The dependency audit reported zero advisories, and an actual runner dry run
+refused Claude without the isolation opt-in. These checks do not establish live conflict/re-run
+behavior or native external CLI execution; those remain open.
+
 Use the separate dev board below for the remaining integration checks and future captures:
 
 1. Push a commit to a dev attempt fork and find the resulting `shipboard-dev-push` Workflow
@@ -150,9 +164,10 @@ Use the separate dev board below for the remaining integration checks and future
 3. Check the instance's assessment step and resulting attempt head, digest, and lane. Board
    refresh also reconciles pushes, so seeing a ready card alone does not prove trigger delivery.
    Inspect the instance with `npx wrangler workflows instances describe shipboard-dev-push <id> --env dev --json`.
-4. Record the observed dispatch, push, ship, conflict, and re-run results here, including the
-   actual agent and whether execution was manual or through the runner. The active self-test
-   remains in progress; dry runs and local tests establish build and local behavior only.
+4. Exercise a live conflict and re-run, then record the resulting heads and ship outcome here.
+   Record native agent CLI execution separately, identifying the actual agent and whether work
+   was manual or launched by the runner. The completed manual dispatch/push/assessment/ship run
+   above does not cover these remaining cases.
 
 ## 6. Run agents against the deployed board
 
