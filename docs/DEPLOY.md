@@ -99,8 +99,11 @@ curl -s -X POST $SHIPBOARD_URL/api/demo \
 ```
 
 Open `$SHIPBOARD_URL` in a browser and paste the board token when the board asks for it (it is kept
-in that browser's localStorage and sent as a Bearer header). Within a few seconds the three demo
-attempts sit in the Ship lane. Ship two; the third moves to Re-run with a conflict on
+in that browser's localStorage and sent as a Bearer header). Or bookmark
+`$SHIPBOARD_URL/#unlock=<board token>` and open it once. The page stores the token and removes the
+fragment from the address bar before the rest of the page runs. The fragment is not sent to the
+server. Use the bare URL after that, so a recording does not show the token. Within a few seconds
+the three demo attempts sit in the Ship lane. Ship two; the third moves to Re-run with a conflict on
 `site/index.html`; re-run it and ship the new attempt.
 
 For `PUBLIC_READ=false`, the UI exchanges the board token for a five-minute cookie limited to one

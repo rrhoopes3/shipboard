@@ -219,6 +219,9 @@ Mutations require `Content-Type: application/json` (415 otherwise).
   carry a `Host` of `127.0.0.1:<port>` or `localhost:<port>`, and mutations an `Origin` (if present)
   of the same. This closes CSRF and DNS rebinding.
 - The UI keeps the board token in `localStorage` and sends it as a Bearer header for API calls.
+  Opening `#unlock=<board token>` stores that same key and removes the fragment with
+  `history.replaceState` in the blocking head script, before the module runs. The fragment is not
+  a request. If storage is blocked, the fragment stays so a reload can try again.
 
 ### Security headers
 Board pages: `Content-Security-Policy: default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`.

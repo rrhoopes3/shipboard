@@ -9,6 +9,7 @@ import { mountHome } from "./js/home.js"
 import { currentRoute, href, onRoute } from "./js/router.js"
 import { initTheme } from "./js/theme.js"
 import { closeSheet } from "./js/sheet.js"
+import { toast } from "./js/toast.js"
 
 const view = document.getElementById("view")
 let mounted = null
@@ -89,9 +90,22 @@ async function boot() {
         ? [h("b", null, "Cloudflare"), config.namespace ? ` · ${config.namespace}` : ""]
         : [h("b", null, "Local board"), ` · ${location.host}`],
     )
+    noteUnlock()
   } catch {
+    noteUnlock()
     // Views show their own errors; without config the board stays usable and mutations explain themselves.
   }
+}
+
+function noteUnlock() {
+  let fresh = false
+  try {
+    fresh = sessionStorage.getItem("shipboard.justUnlocked") === "1"
+    if (fresh) sessionStorage.removeItem("shipboard.justUnlocked")
+  } catch {
+    fresh = false
+  }
+  if (fresh) toast("ok", "Board unlocked.", "This browser will keep the token. It is off the address bar.")
 }
 
 void boot()
