@@ -4,9 +4,15 @@ This puts the board on Workers, with project repos in Artifacts, one Durable Obj
 and a Workflow that hears every push. Agents still run on your own machine through the runner and
 talk to the deployed board over HTTPS.
 
-The Cloudflare host and Wrangler config are implemented, but this repository has not yet been
-deployed and checked end to end against a live Cloudflare account. Treat the steps below as the
-deployment procedure to verify, not evidence of an existing production board.
+The Cloudflare board is live at [shipboard.rick3.dev](https://shipboard.rick3.dev). Production
+uses `PUBLIC_READ=false`: project data, diffs, and previews require the board token. The separate
+dev environment retains `PUBLIC_READ=true`. The steps below describe deployment and verification.
+
+As of 2026-10-02, the [security self-test](https://shipboard.rick3.dev/p/shipboard-security-self-ef20)
+is in progress. Codex coordinates subagents working manually in existing Artifacts task forks.
+A completed event-triggered Workflow was captured for one brief push. The full
+dispatch/push/ship/conflict/re-run self-test remains in progress; native Claude, Grok, and Cursor
+runner execution remains unverified.
 
 ## What you need
 
@@ -118,18 +124,21 @@ npx wrangler workflows instances list shipboard-push      # one instance per pus
 npx wrangler artifacts repos list --namespace shipboard   # the project repo and one repo per attempt
 ```
 
-### Evidence still needed before submission
+### Deployment evidence and remaining checks
 
 The parser accepts the [documented push event](https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/#pushed):
 `type: "cf.artifacts.repo.pushed"`, `source.namespace`, `source.repoName`, `payload.ref`, and
 `payload.after` (hexadecimal SHAs are normalized to lowercase). An unsupported envelope fails the
 Workflow with an explicit error instead of reporting a successful skip; inspect the instance's
-input before adding support for a different envelope. The example in
-`test/cloudflare/push-workflow.test.ts` is synthetic, not evidence that a deployed trigger
-delivered that body. On 2026-10-01, `npx wrangler whoami`
-reported no authenticated account, so live verification remains pending.
+input before adding support for a different envelope.
 
-After login, use the separate dev board below to verify the integration:
+On 2026-10-02, the self-test brief push at 03:43:18 UTC produced a completed Workflow instance
+with `trigger.source: "event"` and the real `cf.artifacts.repo.pushed` payload. Its source
+namespace was `shipboard`, and its repo was the documentation task fork. This establishes
+trigger delivery for that push. See the [captured input fixtures](../test/cloudflare/fixtures/);
+synthetic fixtures and a ready board card alone do not establish live trigger delivery.
+
+Use the separate dev board below for the remaining integration checks and future captures:
 
 1. Push a commit to a dev attempt fork and find the resulting `shipboard-dev-push` Workflow
    instance. Do not manually create the instance: the Artifacts trigger must start it.
@@ -141,24 +150,27 @@ After login, use the separate dev board below to verify the integration:
 3. Check the instance's assessment step and resulting attempt head, digest, and lane. Board
    refresh also reconciles pushes, so seeing a ready card alone does not prove trigger delivery.
    Inspect the instance with `npx wrangler workflows instances describe shipboard-dev-push <id> --env dev --json`.
-4. Record the deployed URL and the observed dispatch, push, ship, conflict, and re-run results
-   here. Until then, the dry run and local tests establish build and local behavior only.
+4. Record the observed dispatch, push, ship, conflict, and re-run results here, including the
+   actual agent and whether execution was manual or through the runner. The active self-test
+   remains in progress; dry runs and local tests establish build and local behavior only.
 
 ## 6. Run agents against the deployed board
 
 On the machine where your agent CLIs are installed and logged in:
 
 ```bash
-npm run runner -- --url $SHIPBOARD_URL --agents claude,codex --concurrency 2
+npm run runner -- --url $SHIPBOARD_URL --agents codex --concurrency 2
 ```
 
 The runner reads `SHIPBOARD_RUNNER_TOKEN`. `npm run runner -- --dry-run` checks the agent binaries
-without claiming anything. Dispatch work from the board UI, or from the agent CLI:
+without claiming anything. To add Claude, first isolate the runner in a VM or container, then set
+`templates.claude.allowBypass` to `true`; the setting itself creates no isolation. See
+[runner security](../README.md#run-a-coding-agent). Dispatch work from the board UI, or from the agent CLI:
 
 ```bash
 npm run agent -- list
 npm run agent -- dispatch --project <projectId> --task "Set the lede" \
-  --path site/index.html --acceptance 'contains site/index.html "ready for sea"' --agent claude
+  --path site/index.html --acceptance 'contains site/index.html "ready for sea"' --agent codex
 ```
 
 The agent CLI reads `SHIPBOARD_URL` and `SHIPBOARD_TOKEN`. For an agent that pushes by itself, use
@@ -168,7 +180,8 @@ recipe that keeps the token out of argv and `.git/config`.
 ## A separate dev board
 
 `env.dev` in `wrangler.jsonc` is the same Worker named `shipboard-dev`, on the Artifacts namespace
-`shipboard-dev` with its own Workflow (`shipboard-dev-push`). Set its secrets with `--env dev`.
+`shipboard-dev` with its own Workflow (`shipboard-dev-push`) and `PUBLIC_READ=true`. Production
+keeps `PUBLIC_READ=false`. Set the dev secrets with `--env dev`.
 
 ```bash
 npx wrangler secret put BOARD_TOKEN --env dev
@@ -226,10 +239,11 @@ The browser has an old token in localStorage, or the runner is using the board U
 variable. The runner uses `SHIPBOARD_RUNNER_TOKEN`; the agent CLI uses `SHIPBOARD_TOKEN`.
 
 **Reads need a token**
-Set `"PUBLIC_READ": "false"` in `wrangler.jsonc` vars and redeploy. API reads and diffs then
-need the board token. The browser requests a short-lived preview session with the board token,
-so the preview iframe and its assets can load without placing that token in the URL. The session
-is scoped to the project's previews and does not authorize board API calls.
+The top-level `wrangler.jsonc` vars already set `"PUBLIC_READ": "false"`; API reads and diffs
+require the board token. The dev environment explicitly uses `"true"`. The browser requests a
+short-lived preview session with the board token, so the preview iframe and its assets can
+load without placing that token in the URL. The session is scoped to the project's previews
+and does not authorize board API calls.
 
 **Importing a repo fails**
 Only public `https://` URLs import. The repo's default branch must be `main`, because every fork

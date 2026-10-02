@@ -78,7 +78,7 @@ describe("wrangler.jsonc", () => {
     expect(events).toEqual([
       { type: "cf.artifacts.repo.pushed", filter: { namespace: "shipboard" }, targets: [{ type: "workflow", workflow_name: "shipboard-push" }] },
     ])
-    expect(vars.PUBLIC_READ).toBe("true")
+    expect(vars.PUBLIC_READ).toBe("false")
     expect(vars.REVIEW_MODEL).toMatch(/^@cf\//)
     expect(vars.ARTIFACTS_NAMESPACE).toBe("shipboard")
   })

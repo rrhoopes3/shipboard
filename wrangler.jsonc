@@ -49,7 +49,7 @@
   "ai": { "binding": "AI", "remote": true },
 
   "vars": {
-    "PUBLIC_READ": "true",
+    "PUBLIC_READ": "false",
     "REVIEW_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     "ARTIFACTS_NAMESPACE": "shipboard"
   },

@@ -6,9 +6,11 @@ Shipboard keeps each coding task in its own Git fork. A task starts with a commi
 
 ## What works today
 
-The local board runs with Node and ordinary Git. It can create or import projects, dispatch briefs, run the scripted harbor demo, accept agent pushes, produce a digest and acceptance-check result, trial-merge attempts, show diffs and previews, ship, park, and re-run. The runner claims queued jobs and launches locally installed Claude Code, Codex, Grok, Cursor, or a configured script. Each job gets an isolated clone; the runner verifies the committed brief, inspects agent changes, commits allowed work, and pushes with a token scoped to that fork.
+The local board runs with Node and ordinary Git. It can create or import projects, dispatch briefs, run the scripted harbor demo, accept agent pushes, produce a digest and acceptance-check result, trial-merge attempts, show diffs and previews, ship, park, and re-run. The runner claims queued jobs and launches locally installed Claude Code, Codex, Grok, Cursor, or a configured script. Each job gets a fresh clone; the runner verifies the committed brief, inspects agent changes, commits allowed work, and pushes with a token scoped to that fork.
 
-The Cloudflare host is implemented in this tree: a Worker serves the same Hono API and static board, Artifacts stores Git repos, Durable Objects hold project and registry state, an Artifacts push event starts a Workflow, and an optional Workers AI reviewer adds a verdict. Trial merges use `isomorphic-git` in memory inside the project Durable Object. The Cloudflare build can be checked offline with `npm run cf:check`; a live Cloudflare deployment and end-to-end verification have not been completed here. Deployment requires a Workers Paid account with Artifacts access. See [deployment instructions](docs/DEPLOY.md).
+The Cloudflare board is live at [shipboard.rick3.dev](https://shipboard.rick3.dev). A Worker serves the same Hono API and static board, Artifacts stores Git repos, Durable Objects hold project and registry state, a Workflow is configured for Artifacts push events, and an optional Workers AI reviewer adds a verdict. Trial merges use `isomorphic-git` in memory inside the project Durable Object. Production uses `PUBLIC_READ=false`, so project data, diffs, and previews need the board token; the separate dev configuration remains public-read. Deployment requires a Workers Paid account with Artifacts access. See [deployment instructions](docs/DEPLOY.md).
+
+As of 2026-10-02, a [security self-test](https://shipboard.rick3.dev/p/shipboard-security-self-ef20) is in progress: Codex coordinates subagents working manually in existing Artifacts task forks. A completed event-triggered Workflow was captured for one brief push; full end-to-end results and native Claude/Grok/Cursor runner execution remain unverified. The Cloudflare build can be checked offline with `npm run cf:check`.
 
 An optional [Claude Code mod](integrations/claude-code/README.md) connects an interactive Claude session to queued `claude-code` jobs. Its hooks and mock-board tests run locally; a live Claude Code session check is still pending because the CLI was unavailable on the development machine.
 
@@ -37,7 +39,9 @@ npm run runner -- --agents codex --dry-run
 npm run runner -- --agents codex
 ```
 
-The dry run checks executable discovery and prints the effective command without claiming a job or calling a model. Grok is found as `grok` on `PATH`, then at `~/.grok/bin/grok`; another installation can be set with `templates.grok.bin`. The runner checks whether Cursor's `agent` command actually resolves to Grok and refuses that collision. Grok's headless edit command needs `--always-approve`, and Cursor's needs `--force`. Both templates are refused by default; on an isolated VM or container, explicitly set `templates.grok.allowBypass` or `templates.cursor.allowBypass` to `true` to offer them. Grok's `--sandbox workspace` can fail open, so that flag does not waive the opt-in. Run `npm run runner -- --help` for flags and [the architecture](docs/ARCHITECTURE.md) for the job and token flow.
+The dry run checks executable discovery and prints the effective command without claiming a job or calling a model. Grok is found as `grok` on `PATH`, then at `~/.grok/bin/grok`; another installation can be set with `templates.grok.bin`. The runner checks whether Cursor's `agent` command actually resolves to Grok and refuses that collision.
+
+Claude, Grok, and Cursor are refused by default. Inside an isolated VM or container, explicitly set `templates.<agent>.allowBypass` to `true` to offer them. This opt-in does not create isolation. Claude's permitted npm/node commands execute repository code; `acceptEdits`, a fresh clone, and environment filtering do not protect host files or credentials. Repository commands can read provider credentials passed to the CLI. Every Claude template requires the opt-in, including custom arguments. Grok's `--always-approve` and Cursor's `--force` also require it; Grok's best-effort `--sandbox workspace` does not waive it. Run `npm run runner -- --help` for flags and [the architecture](docs/ARCHITECTURE.md) for the job and token flow.
 
 Dispatch a task from the board or use the CLI:
 
@@ -64,7 +68,7 @@ npm run agent -- status <attemptId>
 | `public/` | Static board UI and demo fixtures |
 | `test/` | Vitest suites, including real Git flows against the local host |
 
-The detailed behavior and API are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). [docs/PLAN.md](docs/PLAN.md) records the public project plan; [docs/DEPLOY.md](docs/DEPLOY.md) covers a future Cloudflare deployment.
+The detailed behavior and API are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). [docs/PLAN.md](docs/PLAN.md) records the public project plan; [docs/DEPLOY.md](docs/DEPLOY.md) covers Cloudflare deployment and the remaining verification steps.
 
 ## License
 

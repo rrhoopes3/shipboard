@@ -1,0 +1,34 @@
+{
+  "id": "79c63f3f-f1f6-4582-9702-5d1ea4cedc11",
+  "type": "cf.artifacts.repo.pushed",
+  "source": {
+    "namespace": "shipboard",
+    "repoName": "shipboard-security-self-ef20--align-security-a-88f4"
+  },
+  "payload": {
+    "ref": "refs/heads/main",
+    "before": "d41d8da1f3210faa05e789cd992b2b1c8610ecfc",
+    "after": "00cf72a6a7cce54d04a41e2ee699d45dbe02f852",
+    "commits": [
+      {
+        "id": "00cf72a6a7cce54d04a41e2ee699d45dbe02f852",
+        "message": "brief: Align security and deployment documentation",
+        "messageTruncated": false,
+        "timestamp": "2026-10-02T03:43:18.000Z",
+        "author": {
+          "name": "Shipboard",
+          "email": "shipboard@users.noreply.local"
+        },
+        "committer": {
+          "name": "Shipboard",
+          "email": "shipboard@users.noreply.local"
+        },
+        "parents": [
+          "d41d8da1f3210faa05e789cd992b2b1c8610ecfc"
+        ]
+      }
+    ],
+    "totalCommitsCount": 1,
+    "commitsTruncated": false
+  }
+}

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { PUSHED, PushWorkflow, handlePush, parsePushEvent, retryable } from "../../src/cloudflare/push-workflow.ts"
 import type { Envelope } from "../../src/cloudflare/rpc.ts"
@@ -8,7 +9,7 @@ const repo = "harbor-notes-3f2a--tint-the-pier-n-77de"
 
 /** Synthetic example of the documented event shape, NOT a captured live event.
  * https://developers.cloudflare.com/queues/event-subscriptions/events-schemas/#pushed
- * A real Workflow input still needs to be captured after account login; see docs/DEPLOY.md.
+ * A captured live Workflow input and its provenance are in fixtures/.
  */
 function cloudEvent(overrides: Record<string, unknown> = {}, payload: Record<string, unknown> = {}) {
   return {
@@ -105,6 +106,30 @@ function fakeStep() {
 }
 
 describe("handlePush", () => {
+  it("parses and routes the captured live Artifacts event through the Workflow entrypoint", async () => {
+    const captured = JSON.parse(readFileSync(new URL("./fixtures/artifacts-pushed-2026-10-02.json", import.meta.url), "utf8")) as Record<string, unknown>
+    const capturedRepo = "shipboard-security-self-ef20--align-security-a-88f4"
+    const capturedHead = "00cf72a6a7cce54d04a41e2ee699d45dbe02f852"
+    const projectId = "shipboard-security-self-ef20"
+    expect(parsePushEvent(captured)).toEqual({ namespace: "shipboard", repo: capturedRepo, ref: "refs/heads/main", after: capturedHead })
+
+    const { ns, calls } = fakeProjects(() => ({ ok: true, value: undefined }))
+    const step = fakeStep()
+    const workflow = new PushWorkflow({} as ExecutionContext, { PROJECT: ns, ARTIFACTS_NAMESPACE: "shipboard" } as never)
+    const out = await workflow.run(
+      {
+        payload: captured,
+        timestamp: new Date("2026-10-02T03:43:19.944Z"),
+        instanceId: "79c63f3f-f1f6-4582-9702-5d1ea4cedc11",
+        workflowName: "shipboard-push",
+      },
+      step as never,
+    )
+    expect(out).toEqual({ done: true, projectId, repo: capturedRepo, after: capturedHead })
+    expect(calls).toEqual([{ name: projectId, event: { repo: capturedRepo, ref: "refs/heads/main", after: capturedHead } }])
+    expect(step.steps).toHaveLength(1)
+  })
+
   it("routes a main push to the project's object inside one retried step", async () => {
     const { ns, calls } = fakeProjects(() => ({ ok: true, value: undefined }))
     const step = fakeStep()

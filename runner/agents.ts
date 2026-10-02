@@ -3,7 +3,9 @@
  * replaced per element in a single pass, so a brief containing "{cwd}" stays literal.
  *
  * Default headless invocations from research/agents.md section 6, as corrected:
- * - Claude uses acceptEdits, Codex the workspace-write sandbox. Grok 1.0.44 cancelled headless
+ * - Claude uses acceptEdits but permits repo-controlled npm/node commands without verified OS
+ *   isolation, so every Claude template requires allowBypass on an isolated runner. Codex uses
+ *   the workspace-write sandbox. Grok 1.0.44 cancelled headless
  *   editing under acceptEdits (seen live on 2026-10-01). Its working template has
  *   `--always-approve`, but is refused by default: Grok's sandbox can fail open, so an isolated
  *   runner must explicitly set allowBypass. Grok is not given `--trust`, so a fresh clone's
@@ -44,7 +46,7 @@ export type AgentTemplate = {
   budgetUsd?: number
   /** File the agent writes its final message to (rendered), read after it exits. */
   summaryFile?: string
-  /** Accept bypass/yolo flags in `args`. Only for runners inside a VM or container. */
+  /** Opt into Claude execution or bypass/yolo flags. Requires an already isolated VM/container. */
   allowBypass: boolean
   /** Args for a version probe in --dry-run. Empty skips it. */
   versionArgs: string[]
@@ -105,6 +107,7 @@ export const DEFAULT_TEMPLATES: Record<Exclude<TemplateKind, "script">, AgentTem
     versionArgs: ["--version"],
     authCheckArgs: ["auth", "status"],
     notes: [
+      "Requires allowBypass on an isolated VM or container: acceptEdits and tool permissions do not isolate npm/node scripts from host files or credentials.",
       "Auth: CLAUDE_CODE_OAUTH_TOKEN (claude setup-token) or ANTHROPIC_API_KEY. Do not add --bare with a subscription token: bare mode ignores it.",
     ],
   },
@@ -343,8 +346,8 @@ export type AgentRefusal = { id: string; reason: string }
 
 /**
  * Check every agent the runner would offer. An agent is refused (never offered to the board) when
- * its binary is missing, a Cursor template resolves to Grok's `agent` symlink, or its template
- * carries bypass flags without `allowBypass`.
+ * its binary is missing, a Cursor template resolves to Grok's `agent` symlink, or `allowBypass`
+ * is unset on a Claude template or a template carrying bypass flags.
  */
 export async function resolveAgents(
   ids: readonly string[],
@@ -390,6 +393,19 @@ export async function resolveAgents(
       if (!template.bin.includes("/")) {
         warnings.push(`templates.${id}.bin is the bare name \`${template.bin}\`; Grok also installs an \`agent\` binary, so prefer an absolute path.`)
       }
+    }
+
+    // Do not infer host isolation from Claude's permission mode, tool list, or custom args.
+    // Repo tests can execute arbitrary code, and this runner does not create an OS sandbox.
+    if (template.kind === "claude") {
+      if (!template.allowBypass) {
+        refused.push({
+          id,
+          reason: `Claude Code can run repository commands without verified host isolation. Set templates.${id}.allowBypass to true only inside an isolated VM or container; this setting does not create isolation.`,
+        })
+        continue
+      }
+      warnings.push("Claude Code isolation opt-in is set (allowBypass). Repository commands can access the runner's files and provider credentials; isolation must already be in place.")
     }
 
     const bypass = bypassFlagsIn(template)

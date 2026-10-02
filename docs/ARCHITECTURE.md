@@ -249,12 +249,13 @@ All responses: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
   `durable_objects` ProjectDO + RegistryDO (SQLite classes, migration tag v1),
   `workflows: [{ name: "shipboard-push", binding: "PUSH_WORKFLOW", class_name: "PushWorkflow" }]`,
   `triggers.events: [{ type: "cf.artifacts.repo.pushed", filter: { namespace: "shipboard" }, targets: [{ type: "workflow", workflow_name: "shipboard-push" }] }]`,
-  optional `ai: { binding: "AI" }`, `vars: { PUBLIC_READ: "true", REVIEW_MODEL: "..." }`,
+  optional `ai: { binding: "AI" }`, `vars: { PUBLIC_READ: "false", REVIEW_MODEL: "..." }`,
   `limits: { cpu_ms: 300000 }`. Secrets: `BOARD_TOKEN`, `RUNNER_TOKEN`.
   Also: `assets.not_found_handling: "single-page-application"` (so `/p/<id>` gets the app shell, as
   locally), `vars.ARTIFACTS_NAMESPACE` (the namespace the binding points at; shown in `/api/config`,
   checked on push events), `ai.remote: true` (Workers AI has no local mode), and an `env.dev` block
-  on namespace `shipboard-dev` that repeats every non-inheritable binding. Board pages get their
+  on namespace `shipboard-dev` that repeats every non-inheritable binding. Production reads require
+  the board token; the dev environment retains `PUBLIC_READ: "true"`. Board pages get their
   headers from `public/_headers`. Deploy steps: [`docs/DEPLOY.md`](DEPLOY.md).
 - `ProjectDO` (one per project id) holds the core `ProjectService`, storing the `ProjectState` as one
   value in DO storage; an alarm calls `tick()` while jobs are running. A mutex in core serialises
@@ -272,9 +273,12 @@ All responses: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
 
 ## Runner (runner/runner.ts)
 
-`npm run runner -- --url <board> --agents codex,claude [--concurrency 2]`. Grok's
-`--always-approve` and Cursor's `--force` templates require an explicit `allowBypass` setting
-on an isolated runner. Grok's own sandbox is best-effort and does not waive that gate. Config in
+`npm run runner -- --url <board> --agents codex [--concurrency 2]`. Every Claude template,
+Grok's `--always-approve`, and Cursor's `--force` require explicit `allowBypass` on an already
+isolated VM or container. The opt-in does not create isolation. Claude's `acceptEdits` and
+tool permissions allow repository npm/node scripts to access host files and provider credentials;
+a fresh clone and scrubbed environment do not provide OS isolation. Custom Claude arguments and
+Grok's best-effort sandbox do not waive the gate. Config in
 `shipboard.runner.json` (agent templates; see `runner/agents.ts` for defaults). Per job: claim →
 read token → `git clone` in a fresh temp dir with the token in env-scoped git config
 (`GIT_CONFIG_COUNT`), never argv or `.git/config` → verify the brief file at the first commit after
@@ -282,8 +286,9 @@ base equals the claimed brief → write the prompt outside the repo → spawn th
 template (`shell: false`, own process group, scrubbed env, wall-clock timeout with SIGINT → SIGTERM →
 SIGKILL) → inspect the tree (undo agent commits with `reset --soft`, drop changes to `.git`,
 `.shipboard`, agent config dirs) → commit with trailers (`Shipboard-Attempt`, `Shipboard-Agent`) →
-write token → push `HEAD:main` → `pushed` → `finish`. Heartbeat every 60 s. Agents never see a
-token. The `demo` agent never reaches a runner.
+write token → push `HEAD:main` → `pushed` → `finish`. Heartbeat every 60 s. Board and Git tokens
+are kept out of the agent's environment; protecting them from repository code also requires host
+isolation. The `demo` agent never reaches a runner.
 
 `npm run agent -- <command>` is the thin CLI for agents that self-serve: `list`, `board`, `dispatch`
 (with `--credentials`, prints a ready `git push` command), `status`.

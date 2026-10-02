@@ -94,6 +94,12 @@ export async function harness(opts: HarnessOptions) {
         clearTimeout(timer)
         resolve({ exitCode: code ?? 1, stdout, stderr })
       })
+      // A hook process can exit without consuming stdin; preserve its exit result.
+      child.stdin.on("error", (error: NodeJS.ErrnoException) => {
+        if (error.code === "EPIPE") return
+        clearTimeout(timer)
+        reject(error)
+      })
       child.stdin.end(init?.stdin ?? "")
     })
   }

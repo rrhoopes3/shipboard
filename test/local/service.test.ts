@@ -214,7 +214,7 @@ describe("ProjectService on its own ports", () => {
     const main = await git.commit(id, { "site/index.html": "<p>main</p>\n" }, "main")
     const actualTrial = GitWorkspace.prototype.trialMerge
     // Model the two reads around a force-push: trial observed Z, assessment sees stored Y.
-    const trial = vi.spyOn(GitWorkspace.prototype, "trialMerge").mockImplementationOnce(async function (mainRepo, forkRepo) {
+    const trial = vi.spyOn(GitWorkspace.prototype, "trialMerge").mockImplementationOnce(async function (this: GitWorkspace, mainRepo, forkRepo) {
       return { ...await actualTrial.call(this, mainRepo, forkRepo), headSha: "f".repeat(40) }
     })
     await service.onPushEvent({ repo: id, ref: "refs/heads/main", after: main.sha })

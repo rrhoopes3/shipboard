@@ -390,11 +390,11 @@ export function timeoutFor(config: RunnerConfig, template: AgentTemplate): numbe
 
 export const RUNNER_USAGE = `shipboard runner: claims jobs from a board and runs a local coding agent on each.
 
-  npm run runner -- [--url <board>] [--agents codex,claude] [--concurrency 2] [--config <file>]
+  npm run runner -- [--url <board>] [--agents codex] [--concurrency 2] [--config <file>]
                     [--job-timeout 20m] [--once] [--dry-run]
 
   --url          Board URL (default http://127.0.0.1:8787, or SHIPBOARD_URL).
-  --agents       Agent ids to offer, comma separated or repeated (default: every agent whose binary is found).
+  --agents       Agent ids to offer, comma separated or repeated (default: every agent that passes discovery and safety checks).
   --concurrency  Jobs at once (default 1).
   --config       Config file (default ./shipboard.runner.json if it exists). See shipboard.runner.example.json.
   --job-timeout  Wall-clock limit per agent run: seconds, or 90s / 20m / 1h (default 1200 s).

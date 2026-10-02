@@ -159,6 +159,38 @@ describe("agentEnv", () => {
 })
 
 describe("resolveAgents", () => {
+  it("refuses default Claude without isolation opt-in, then offers it with a warning", async () => {
+    const dir = await tempDir()
+    const bin = path.join(dir, "bin", "claude")
+    await executable(bin)
+    const opts = { pathVar: path.dirname(bin), cwd: dir, homeDir: dir }
+    // This template has no bypass flag: permission-mode/tool allowlists are not isolation.
+    expect(bypassFlagsIn(DEFAULT_TEMPLATES.claude)).toEqual([])
+    const refused = await resolveAgents(["claude"], { claude: DEFAULT_TEMPLATES.claude }, opts)
+    expect(refused.ready).toEqual([])
+    expect(refused.refused[0]?.reason).toMatch(/host isolation.*templates\.claude\.allowBypass.*does not create isolation/)
+
+    const allowed = await resolveAgents(["claude"], { claude: { ...DEFAULT_TEMPLATES.claude, allowBypass: true } }, opts)
+    expect(allowed.refused).toEqual([])
+    expect(allowed.ready[0]?.binPath).toBe(bin)
+    expect(allowed.ready[0]?.warnings.join(" ")).toMatch(/allowBypass.*files and provider credentials/)
+  })
+
+  it("requires Claude opt-in even when a renamed template overrides its args", async () => {
+    const dir = await tempDir()
+    const bin = path.join(dir, "claude")
+    await executable(bin)
+    const claude = { ...DEFAULT_TEMPLATES.claude, bin, args: ["-p", "{prompt}", "--permission-mode", "default"] }
+    const opts = { pathVar: "", cwd: dir, homeDir: dir }
+    const refused = await resolveAgents(["reviewer"], { reviewer: claude }, opts)
+    expect(refused.ready).toEqual([])
+    expect(refused.refused[0]?.reason).toContain("templates.reviewer.allowBypass")
+
+    const allowed = await resolveAgents(["reviewer"], { reviewer: { ...claude, allowBypass: true } }, opts)
+    expect(allowed.refused).toEqual([])
+    expect(allowed.ready[0]?.template.args).toEqual(claude.args)
+  })
+
   it("refuses Grok auto-approval by default even with workspace sandbox, then offers it with an explicit opt-in", async () => {
     const dir = await tempDir()
     await executable(path.join(dir, "bin", "grok"))

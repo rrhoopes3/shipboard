@@ -1,5 +1,5 @@
 /**
- * `npm run runner -- --url <board> --agents codex,claude [--concurrency 2]`
+ * `npm run runner -- --url <board> --agents codex [--concurrency 2]`
  *
  * Polls POST /api/runner/claim every 3 s (backing off to 15 s while idle), runs up to N jobs at once
  * (runner/job.ts), heartbeats each lease every 60 s. Ctrl-C stops claiming, stops running agents,

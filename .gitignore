@@ -7,3 +7,8 @@ dist/
 .env*
 *.log
 .DS_Store
+
+# Local operator notes, runner settings, and private audit artifacts.
+NOTES-PRIVATE.md
+shipboard.runner.json
+scans/
