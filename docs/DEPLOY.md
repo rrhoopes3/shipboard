@@ -11,8 +11,10 @@ dev environment retains `PUBLIC_READ=true`. The steps below describe deployment 
 On 2026-10-02, the [security self-test](https://shipboard.rick3.dev/p/shipboard-security-self-ef20)
 shipped three tasks through live dispatch, push, assessment, and ship. Codex subagents implemented
 the Artifacts forks, with a coordinator handling the runner protocol manually. A completed
-event-triggered Workflow was captured for one brief push. Live conflict/re-run behavior and
-native Claude, Grok, and Cursor runner execution remain unverified.
+event-triggered Workflow was captured for one brief push. On 2026-10-04, live conflict and re-run
+were exercised on production with both the scripted demo agent and real agents, and the runner
+launched native Claude Code, Codex, Grok, and Cursor CLIs that pushed and shipped. See
+[deployment evidence](#deployment-evidence-and-remaining-checks).
 
 ## What you need
 
@@ -149,8 +151,28 @@ with assessment outputs matching their respective Git heads.
 
 Source integration `5c62b69` passed 468 tests across 38 files, type checking, and the Cloudflare
 dry-run build. The dependency audit reported zero advisories, and an actual runner dry run
-refused Claude without the isolation opt-in. These checks do not establish live conflict/re-run
-behavior or native external CLI execution; those remain open.
+refused Claude without the isolation opt-in. These checks did not establish live conflict/re-run
+behavior or native external CLI execution; the 2026-10-04 runs below cover both.
+
+On 2026-10-04, on production:
+
+- **Conflict and re-run, scripted agent.** In `harbor-notes-8a54`, shipping the footer moved main
+  from `a2f5455` to `e777c57` and re-checked the other ready attempts. Shipping the rename moved
+  main to `4826520` and sent the tint attempt to Needs re-run, conflicting in `site/index.html`.
+  Re-run discarded attempt 1 (based on `a2f5455`) and forked attempt 2 from `4826520`, committing
+  the same brief under a new sha (`17c47c1` became `04d0019`). Attempt 2 shipped as `be1b5f3`.
+- **Native agents through the runner.** A runner on a Linux VPS launched Claude Code, Codex, Grok,
+  and Cursor. Claude, Grok, and Cursor ran with `allowBypass`. Cursor also needed a template
+  override that drops `--sandbox enabled`, because its sandbox could not start on that host.
+  In `night-ferry-6db7`, Claude and Codex both edited the lede. Shipping Codex's attempt
+  (`e5ff7a0`) made Claude's conflict. Re-run sent the same brief back to Claude Code on the new
+  main, and attempt 2 shipped as `862e6db` with both edits. Four further briefs, one per agent,
+  were claimed within one second of each other, pushed in 23 to 78 seconds, and shipped; main
+  ended at `bef0cfb`.
+- **Failures seen.** One Claude job failed with `spawn … ENOENT` because Claude Code was
+  auto-updating its binary at launch; its re-run succeeded. In a rehearsal project, the Workers AI
+  review called a README change over an 80-word limit when it was about 55 words. The review is
+  advisory: the card went to Needs a look, and shipping stayed a human decision.
 
 Use the separate dev board below for the remaining integration checks and future captures:
 
@@ -164,10 +186,8 @@ Use the separate dev board below for the remaining integration checks and future
 3. Check the instance's assessment step and resulting attempt head, digest, and lane. Board
    refresh also reconciles pushes, so seeing a ready card alone does not prove trigger delivery.
    Inspect the instance with `npx wrangler workflows instances describe shipboard-dev-push <id> --env dev --json`.
-4. Exercise a live conflict and re-run, then record the resulting heads and ship outcome here.
-   Record native agent CLI execution separately, identifying the actual agent and whether work
-   was manual or launched by the runner. The completed manual dispatch/push/assessment/ship run
-   above does not cover these remaining cases.
+4. Repeat the live conflict and re-run on the dev board when you change merge or re-run code. The
+   2026-10-04 production runs above are the current record.
 
 ## 6. Run agents against the deployed board
 
