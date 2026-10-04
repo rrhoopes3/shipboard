@@ -83,7 +83,7 @@ The scripted agents prove the loop. This segment shows real coding agents on Art
    `npm run runner -- --url https://shipboard.rick3.dev --agents claude,codex,grok,cursor --concurrency 4`.
    Claude Code, Grok, and Cursor need the `allowBypass` opt-in (see below). Say:
    > The runner holds the tokens. The agents never see one. The runner checks the committed brief
-   > before the agent starts, and pushes only the paths it allows.
+   > before the agent starts, and the board flags any file the brief didn't name.
 4. Speed up the waiting and label it on screen ("4× speed" or similar). As pushes land, show a
    digest and, if Workers AI answered, the **Review** block with its verdict.
 5. Ship two. Re-run the one that conflicts. It goes back to the same agent on the new main.
