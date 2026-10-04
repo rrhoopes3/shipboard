@@ -66,11 +66,14 @@ export function authBanner() {
   const block = mutationBlock()
   if (!block) return null
   if (block.kind === "locked") {
+    const text = config.publicRead
+      ? [h("strong", null, "Read-only."), " You can read every brief, diff and preview. ", LOCKED_SENTENCE]
+      : [h("strong", null, "Private board."), " Reading projects, briefs, diffs and previews needs the board token, and so do shipping, re-running and dispatching."]
     return h(
       "div",
       { class: "banner", "data-tone": "lamp", role: "region", "aria-label": "Read-only mode" },
       icon("lock"),
-      h("p", null, h("strong", null, "Read-only."), " You can read every brief, diff and preview. ", LOCKED_SENTENCE),
+      h("p", null, ...text),
       h("button", { class: "btn btn-lamp btn-sm", type: "button", onclick: () => openUnlock() }, icon("key"), "Unlock"),
     )
   }
